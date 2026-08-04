@@ -488,35 +488,30 @@ inline std::vector<Eigen::Vector3f> rcsDirections1() {
             {0.0F, s, -s}};
 }
 
-// 12-thruster layout 2 — thrusters cover all six axes so DG is full-rank.
+// 8-thruster layout 2 — thrusters cover all six axes so DG is full-rank. Two thrusters at each of
+// the four corners, keeping the corner symmetry of the twelve-thruster arrangement this was cut
+// down from when MAX_EFF_CNT dropped to 8. [DG] stays rank 6 (condition number 2.0 about the
+// origin, 2.2 about the {0.1, 0.1, 0.1} CoM the tests use), so every axis remains controllable.
 inline std::vector<Eigen::Vector3f> rcsPositions2() {
     return {{-1.0F, -1.0F, 1.0F},
             {-1.0F, -1.0F, 1.0F},
-            {-1.0F, -1.0F, 1.0F},
-            {1.0F, 1.0F, 1.0F},
             {1.0F, 1.0F, 1.0F},
             {1.0F, 1.0F, 1.0F},
             {1.0F, 1.0F, -1.0F},
             {1.0F, 1.0F, -1.0F},
-            {1.0F, 1.0F, -1.0F},
-            {-1.0F, -1.0F, -1.0F},
             {-1.0F, -1.0F, -1.0F},
             {-1.0F, -1.0F, -1.0F}};
 }
 
 inline std::vector<Eigen::Vector3f> rcsDirections2() {
-    return {{1.0F, 0.0F, 0.0F},
-            {0.0F, 1.0F, 0.0F},
+    return {{0.0F, 1.0F, 0.0F},
             {0.0F, 0.0F, -1.0F},
             {0.0F, 0.0F, -1.0F},
-            {0.0F, -1.0F, 0.0F},
             {-1.0F, 0.0F, 0.0F},
             {0.0F, -1.0F, 0.0F},
             {-1.0F, 0.0F, 0.0F},
-            {0.0F, 0.0F, 1.0F},
             {1.0F, 0.0F, 0.0F},
-            {0.0F, 1.0F, 0.0F},
-            {0.0F, 0.0F, 1.0F}};
+            {0.0F, 1.0F, 0.0F}};
 }
 
 #endif  // TEST_FORCE_TORQUE_THR_FORCE_MAPPING_H

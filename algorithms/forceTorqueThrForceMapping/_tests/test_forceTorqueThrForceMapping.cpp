@@ -28,7 +28,7 @@ TEST(ForceTorqueThrForceMappingTest, RegressionNoTorqueCommand) {
 
 TEST(ForceTorqueThrForceMappingTest, RegressionAllDirectionsCovered) {
     runRegressionCase(
-        12U, rcsPositions2(), rcsDirections2(), {0.1F, 0.1F, 0.1F}, {0.0F, 0.0F, 0.0F}, {0.9F, 1.1F, 1.0F});
+        8U, rcsPositions2(), rcsDirections2(), {0.1F, 0.1F, 0.1F}, {0.0F, 0.0F, 0.0F}, {0.9F, 1.1F, 1.0F});
 }
 
 TEST(ForceTorqueThrForceMappingTest, RegressionCoMAtOrigin) {
@@ -124,12 +124,15 @@ TEST(ForceTorqueThrForceMappingTest, PropertyNonNegativeForces) {
 
 TEST(ForceTorqueThrForceMappingTest, PropertyMinimumIsZero) {
     propertyMinimumIsZero(
-        12U, rcsPositions2(), rcsDirections2(), {0.0F, 0.0F, 0.0F}, {0.3F, -0.2F, 0.1F}, {0.9F, 1.1F, 1.0F});
+        8U, rcsPositions2(), rcsDirections2(), {0.0F, 0.0F, 0.0F}, {0.3F, -0.2F, 0.1F}, {0.9F, 1.1F, 1.0F});
 }
 
+// Six of layout 1's eight thrusters, so two slots sit past numThrusters and the padding assertion has
+// something to check. At the full eight the loop over [numThrusters, kMaxThrusterCount) is empty, and
+// the property passes without testing anything; the boundary case is covered separately below.
 TEST(ForceTorqueThrForceMappingTest, PropertyPaddingIsZero) {
     propertyPaddingIsZero(
-        8U, rcsPositions1(), rcsDirections1(), {0.1F, 0.1F, 0.1F}, {0.4F, 0.2F, 0.4F}, {0.0F, 0.9F, 1.1F});
+        6U, rcsPositions1(), rcsDirections1(), {0.1F, 0.1F, 0.1F}, {0.4F, 0.2F, 0.4F}, {0.0F, 0.9F, 1.1F});
 }
 
 TEST(ForceTorqueThrForceMappingTest, PropertyScaleInvariance) {
@@ -326,11 +329,11 @@ TEST(ForceTorqueThrForceMappingTest, CommandOnUncontrollableAxis) {
 // (i.e. at construction); set entries to false to opt out per axis.
 // ---------------------------------------------------------------------------
 
-// 12-thruster layout 2 is full-rank — every axis is controllable, so an all-true assertion must
+// 8-thruster layout 2 is full-rank — every axis is controllable, so an all-true assertion must
 // construct without throwing.
 TEST(ForceTorqueThrForceMappingTest, DesiredControlAxesAllTrueOnFullRankLayout) {
     ThrusterArrayConfiguration config{};
-    ASSERT_TRUE(buildThrusterConfig(12U, rcsPositions2(), rcsDirections2(), config));
+    ASSERT_TRUE(buildThrusterConfig(8U, rcsPositions2(), rcsDirections2(), config));
     EXPECT_NO_THROW(makeMappingAlgorithm(config, {0.1F, 0.1F, 0.1F}, {true, true, true, true, true, true}));
 }
 

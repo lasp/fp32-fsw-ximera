@@ -458,8 +458,12 @@ TEST(MomentumManagementConfigValidation, RejectsNonFiniteEntries) {
 }
 
 // Only the first numRW columns describe real wheels; garbage beyond that must not reject the config.
+// GsMatrix_B is exactly kMaxNumRw wide and numRW == kMaxNumRw is itself a legal configuration, so the
+// array has to be built one wheel short of the maximum for a column past numRW to exist at all.
 TEST(MomentumManagementConfigValidation, IgnoresColumnsBeyondNumRw) {
-    auto rwArrayConfig = makeStandardRwArrayConfig();
+    static_assert(kMaxNumRw >= 2U, "the test needs at least one wheel plus a spare column");
+
+    auto rwArrayConfig = makeRwArrayConfig(standardSpinAxes(kMaxNumRw - 1U), 0.1F);
     rwArrayConfig.GsMatrix_B.col(rwArrayConfig.numRW) = Eigen::Vector3f{0.0F, 9.0F, 0.0F};
 
     EXPECT_TRUE(MomentumManagementConfig::isValidRwArrayConfiguration(rwArrayConfig));

@@ -11,9 +11,9 @@
 // constants that follow. Turn clang-format off so IntegerLiteralSeparator does not introduce them.
 
 // clang-format off
-#define MAX_NUM_CSS_SENSORS 32
-#define MAX_EFF_CNT 36
-#define RW_EFF_CNT 36
+#define MAX_NUM_CSS_SENSORS 8
+#define MAX_EFF_CNT 8
+#define RW_EFF_CNT 4
 
 // Not used by any fp32 algorithm; sized for the Xmera modules that own these payloads.
 #define MAX_KEY_POINTS 5000

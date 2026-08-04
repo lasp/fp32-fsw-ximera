@@ -24,8 +24,15 @@ inline MomentumManagementRwArrayConfiguration makeRwArrayConfig(const std::vecto
 }
 
 // The canonical four-wheel pyramid used by the Xmera unit test: three body axes plus the (1,1,1) diagonal.
+// A caller that needs fewer wheels than the array is wide takes a prefix of it.
+inline std::vector<Eigen::Vector3f> standardSpinAxes(std::size_t numWheels = 4U) {
+    const std::vector<Eigen::Vector3f> axes{
+        {1.0F, 0.0F, 0.0F}, {0.0F, 1.0F, 0.0F}, {0.0F, 0.0F, 1.0F}, {1.0F, 1.0F, 1.0F}};
+    return {axes.begin(), axes.begin() + static_cast<std::ptrdiff_t>(std::min(numWheels, axes.size()))};
+}
+
 inline MomentumManagementRwArrayConfiguration makeStandardRwArrayConfig(float js = 0.1F) {
-    return makeRwArrayConfig({{1.0F, 0.0F, 0.0F}, {0.0F, 1.0F, 0.0F}, {0.0F, 0.0F, 1.0F}, {1.0F, 1.0F, 1.0F}}, js);
+    return makeRwArrayConfig(standardSpinAxes(), js);
 }
 
 // Pack per-wheel speeds into the algorithm's fixed-size speed vector; unused entries stay zero.
