@@ -15,7 +15,7 @@ typedef struct ThrFiringRemainderAlgorithmHandle ThrFiringRemainderAlgorithmHand
 
 /**
  * @brief Get the maximum thruster count constant for validation.
- * @return The maximum thruster count (THR_FIRING_REMAINDER_MAX_THRUSTER_COUNT).
+ * @return The maximum thruster count (kMaxThrusterCount).
  */
 uint32_t ThrFiringRemainderAlgorithm_getMaxThrusterCount(void);
 
@@ -33,7 +33,7 @@ uint32_t ThrFiringRemainderAlgorithm_getMaxThrusterCount(void);
  *       reports whether a candidate set would be accepted, without throwing.
  */
 bool ThrFiringRemainderAlgorithm_validateConfig(uint32_t numThrusters,
-                                                float maxThrust[THR_FIRING_REMAINDER_MAX_THRUSTER_COUNT],
+                                                float maxThrust[MAX_EFF_CNT],
                                                 float thrMinFireTime,
                                                 float controlPeriod,
                                                 float onTimeSaturationFactor,
@@ -49,13 +49,12 @@ bool ThrFiringRemainderAlgorithm_validateConfig(uint32_t numThrusters,
  * @param pulsingRegime          [-] on-pulsing or off-pulsing.
  * @return Pointer to a new ThrFiringRemainderAlgorithm (must be destroyed). Validated; throws on invalid input.
  */
-ThrFiringRemainderAlgorithmHandle* ThrFiringRemainderAlgorithm_create(
-    uint32_t numThrusters,
-    float maxThrust[THR_FIRING_REMAINDER_MAX_THRUSTER_COUNT],
-    float thrMinFireTime,
-    float controlPeriod,
-    float onTimeSaturationFactor,
-    ThrFiringRemainderPulsingRegime pulsingRegime);
+ThrFiringRemainderAlgorithmHandle* ThrFiringRemainderAlgorithm_create(uint32_t numThrusters,
+                                                                      float maxThrust[MAX_EFF_CNT],
+                                                                      float thrMinFireTime,
+                                                                      float controlPeriod,
+                                                                      float onTimeSaturationFactor,
+                                                                      ThrFiringRemainderPulsingRegime pulsingRegime);
 
 /**
  * @brief Destroy a previously created ThrFiringRemainderAlgorithm.
@@ -76,7 +75,7 @@ void ThrFiringRemainderAlgorithm_destroy(ThrFiringRemainderAlgorithmHandle* self
  */
 void ThrFiringRemainderAlgorithm_setConfig(ThrFiringRemainderAlgorithmHandle* self,
                                            uint32_t numThrusters,
-                                           float maxThrust[THR_FIRING_REMAINDER_MAX_THRUSTER_COUNT],
+                                           float maxThrust[MAX_EFF_CNT],
                                            float thrMinFireTime,
                                            float controlPeriod,
                                            float onTimeSaturationFactor,
