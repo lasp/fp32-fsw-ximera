@@ -18,7 +18,7 @@ MrpFeedbackInputRwData rwConfigFromC(const MrpFeedbackRwConfig_c& c) {
     out.GsMatrix_B = cArrayToEigenMatrix<float, 3, MrpFeedbackConfig::kMaxNumRw>(c.GsMatrix_B);
     for (uint32_t i = 0U; i < MrpFeedbackConfig::kMaxNumRw; ++i) {
         out.JsList[i] = c.JsList[i];
-        out.wheelAvailability[i] = c.wheelAvailability[i];
+        out.wheelAvailability[i] = fsw::toDeviceAvailability(c.wheelAvailability[i]);
     }
     return out;
 }

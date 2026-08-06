@@ -1,8 +1,8 @@
 #ifndef F32XMERA_MRP_STEERING_TYPES_H
 #define F32XMERA_MRP_STEERING_TYPES_H
 
+#include "utilities/fsw/deviceAvailability.h"
 #include "utilities/fsw/plainCAlgorithmDataTypes.h"
-#include <fswAlgorithms/fswUtilities/fswDefinitions.h>
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -39,7 +39,7 @@ typedef struct {
     uint32_t numRW;                                /*!< [-] number of reaction wheels on the vehicle */
     float GsMatrix_B[3 * MRP_STEERING_MAX_NUM_RW]; /*!< [-] RW spin axes in body frame, three per wheel */
     float JsList[MRP_STEERING_MAX_NUM_RW];         /*!< [kg*m^2] per-wheel spin-axis inertia */
-    FSWdeviceAvailability
+    DeviceAvailability_c
         wheelAvailability[MRP_STEERING_MAX_NUM_RW]; /*!< [-] AVAILABLE / UNAVAILABLE state of each wheel */
 } MrpSteeringRwConfig_c;
 

@@ -1,6 +1,7 @@
 #ifndef F32XMERA_MRP_FEEDBACK_TYPES_H
 #define F32XMERA_MRP_FEEDBACK_TYPES_H
 
+#include "utilities/fsw/deviceAvailability.h"
 #include "utilities/fsw/plainCAlgorithmDataTypes.h"
 
 #include <stdint.h>
@@ -28,9 +29,9 @@ typedef enum { CONTROL_LAW_TYPE_NORMAL_C = 0, CONTROL_LAW_TYPE_SIMPLE_INTEGRAL_C
  */
 typedef struct {
     uint32_t numRW;                                     /*!< [-] number of reaction wheels on the vehicle */
-    float GsMatrix_B[3 * MRP_FEEDBACK_MAX_NUM_RW];      /*!< [-] RW spin axes in body frame, three per wheel */
-    float JsList[MRP_FEEDBACK_MAX_NUM_RW];              /*!< [kg*m^2] per-wheel spin-axis inertia */
-    int32_t wheelAvailability[MRP_FEEDBACK_MAX_NUM_RW]; /*!< [-] AVAILABLE / UNAVAILABLE state of each wheel */
+    float GsMatrix_B[3 * MRP_FEEDBACK_MAX_NUM_RW];               /*!< [-] RW spin axes in body frame, three per wheel */
+    float JsList[MRP_FEEDBACK_MAX_NUM_RW];                       /*!< [kg*m^2] per-wheel spin-axis inertia */
+    DeviceAvailability_c wheelAvailability[MRP_FEEDBACK_MAX_NUM_RW]; /*!< [-] AVAILABLE / UNAVAILABLE state of each wheel */
 } MrpFeedbackRwConfig_c;
 
 /**

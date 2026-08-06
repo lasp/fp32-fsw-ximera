@@ -1,8 +1,8 @@
 #ifndef F32XMERA_RW_MOTOR_TORQUE_TYPES_H
 #define F32XMERA_RW_MOTOR_TORQUE_TYPES_H
 
+#include "utilities/fsw/deviceAvailability.h"
 #include "utilities/fsw/plainCAlgorithmDataTypes.h"
-#include <fswAlgorithms/fswUtilities/fswDefinitions.h>
 
 #include <stdint.h>
 
@@ -20,7 +20,7 @@ extern "C" {
 typedef struct {
     uint32_t numRW;                                   /*!< [-]   number of reaction wheels on the vehicle */
     float GsMatrix_B[3 * RW_MOTOR_TORQUE_MAX_NUM_RW]; /*!< [-]   RW spin axes in body frame, three per wheel */
-    FSWdeviceAvailability
+    DeviceAvailability_c
         wheelAvailability[RW_MOTOR_TORQUE_MAX_NUM_RW]; /*!< [-]   AVAILABLE / UNAVAILABLE state of each wheel */
 } RwMotorTorqueArrayConfiguration_c;
 

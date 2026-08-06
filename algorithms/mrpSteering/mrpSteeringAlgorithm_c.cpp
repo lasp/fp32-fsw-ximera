@@ -18,7 +18,7 @@ InputRwData rwConfigFromC(const MrpSteeringRwConfig_c& c) {
     out.GsMatrix_B = cArrayToEigenMatrix<float, 3, MrpSteeringConfig::kMaxNumRw>(c.GsMatrix_B);
     for (uint32_t i = 0U; i < MrpSteeringConfig::kMaxNumRw; ++i) {
         out.JsList[i] = c.JsList[i];
-        out.wheelAvailability[i] = c.wheelAvailability[i];
+        out.wheelAvailability[i] = fsw::toDeviceAvailability(c.wheelAvailability[i]);
     }
     return out;
 }

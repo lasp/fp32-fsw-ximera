@@ -130,7 +130,7 @@ def test_rw_motor_torque(show_plots, num_control_axes, num_wheels, num_input_cmd
         rw_avail_in_msg = messaging.RWAvailabilityMsg().write(rw_availability_message)
         module.rwAvailInMsg.subscribeTo(rw_avail_in_msg)
     else:
-        avail = [rwMotorTorqueF32.AVAILABLE] * num_wheels  # this is used purely for the python level solution
+        avail = [messaging.AVAILABLE] * num_wheels  # this is used purely for the python level solution
 
     # Setup logging on the test module output message so that we get all the writes to it
     data_log = module.rwMotorTorqueOutMsg.recorder()

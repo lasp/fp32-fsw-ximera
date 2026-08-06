@@ -2,7 +2,7 @@
 #define F32XMERA_MRP_STEERING_ALGORITHM_H
 
 #include "../msgPayloadDef/definitions.h"
-#include "fswAlgorithms/fswUtilities/fswDefinitions.h"
+#include "utilities/fsw/deviceAvailability.h"
 #include "utilities/fsw/freestandingInvalidArgument.h"
 #include "utilities/fsw/freestandingIsFinite.hpp"
 #include "utilities/fsw/validInertiaCheck.h"
@@ -18,7 +18,7 @@
 struct InputRwData {
     Eigen::Matrix<float, 3, RW_EFF_CNT> GsMatrix_B = Eigen::Matrix<float, 3, RW_EFF_CNT>::Zero();
     std::array<float, RW_EFF_CNT> JsList{};
-    std::array<FSWdeviceAvailability, RW_EFF_CNT> wheelAvailability{};  //!< per-wheel availability (fixed at reset)
+    std::array<fsw::DeviceAvailability, RW_EFF_CNT> wheelAvailability{};  //!< per-wheel availability (fixed at reset)
     uint32_t numRW{};
 };
 
