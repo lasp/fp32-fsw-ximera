@@ -133,6 +133,8 @@ algorithms/thrustVectoring/thrustVectoring.h
 algorithms/thrustVectoring/thrustVectoring.cpp
 algorithms/thrustVectoring/thrustVectoringAlgorithm_c.h
 algorithms/thrustVectoring/thrustVectoringAlgorithm_c.cpp
+algorithms/regionsOfInterestPrune/regionsOfInterestPrune.cpp
+algorithms/regionsOfInterestPrune/regionsOfInterestPrune.h
 algorithms/cobConverter/cobConverter.h
 algorithms/cobConverter/cobConverter.cpp
 algorithms/cobConverter/cobConverterAlgorithm_c.h
