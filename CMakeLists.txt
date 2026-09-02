@@ -121,7 +121,7 @@ set(algorithms
     "celestialTwoBodyPoint"
     "convertStPlatformToBody"
     "cssComm"
-    "cssWlsEst"
+    "cssWeightedLeastSquares"
     "dvAccumulation"
     "dvExecuteGuidance"
     "dvGuidance"
