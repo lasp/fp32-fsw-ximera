@@ -215,11 +215,13 @@ int CssWlsEstAlgorithm::computeWlsmn(const uint32_t numActiveCss,
         /*!   -# Multiply the Ht(HHt)^-1 by the observation vector to get fit*/
         x = h.transpose() * hhtInverse * y.head<2>();
     } else if (numActiveCss >= kMinMeasurementsForWeightedFit) { /*! - If we have more than 2, do true LSQ fit*/
-        const auto rows = static_cast<Eigen::Index>(numActiveCss);
-        /*!    -# Use the weights to compute (HtWH)^-1HtW*/
-        const Eigen::Matrix<float, Eigen::Dynamic, 3> h = H.topRows(rows);
-        const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> w = weights.head(rows).asDiagonal();
-        const Eigen::Matrix3f htwh = h.transpose() * w * h;
+        /*!    -# Use the weights to compute (HtWH)^-1HtW. The rows of H and the entries of y past
+           numActiveCss are zero, so the products over the full operands equal the products over the
+           active measurements alone. Forming them at full size keeps every intermediate a
+           fixed-size Eigen type; a dynamically sized one would allocate, and this build forbids
+           heap allocation. */
+        const Eigen::Matrix<float, kMaxNumCss, 3> wh = weights.asDiagonal() * H;
+        const Eigen::Matrix3f htwh = H.transpose() * wh;
 
         Eigen::Matrix3f htwhInverse = Eigen::Matrix3f::Zero();
         float determinant = 0.0F;
@@ -232,7 +234,7 @@ int CssWlsEstAlgorithm::computeWlsmn(const uint32_t numActiveCss,
             status = 1;
         }
         /*!    -# Multiply the LSQ matrix by the obs vector for best fit*/
-        x = htwhInverse * h.transpose() * w * y.head(rows);
+        x = htwhInverse * (wh.transpose() * y);
     }
 
     return status;
