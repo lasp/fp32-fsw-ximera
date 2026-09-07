@@ -3,6 +3,7 @@
 
 #include "freestandingInvalidArgument.h"
 #include "safeMath.h"
+#include "utilities/fsw/freestandingIsFinite.hpp"
 #include <math.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -164,6 +165,12 @@ inline double meanToHyperbolicAnomaly(const double N, const double e) {
  *  @return Cartesian position and velocity
  */
 inline CartesianState elementsToCartesianState(double const mu, const ClassicalElements& elements) {
+    CartesianState state{};
+    state.position.setZero();
+    state.velocity.setZero();
+    if (mu <= 0.0) {
+        return state;
+    }
     double const a = elements.semiMajorAxis;
     double const e = elements.eccentricity;
     double const i = elements.inclination;
@@ -173,6 +180,9 @@ inline CartesianState elementsToCartesianState(double const mu, const ClassicalE
 
     double const p = a != 0.0 ? a * (1 - e * e) : elements.radiusPeriapsis * (1 + e);
     double const r = p / (1 + e * safeCos(f));
+    if (!fsw::is_finite(r) || r <= 0.0) {  // guard against invalid geometry
+        return state;
+    }
     double const h = safeSqrt(mu * p);
 
     double const cos_O = safeCos(Omega);
@@ -196,7 +206,6 @@ inline CartesianState elementsToCartesianState(double const mu, const ClassicalE
     double const vy = -mu / h * (sin_O * (sin_theta + e * sin_o) - cos_O * (cos_theta + e * cos_o) * cos_i);
     double const vz = mu / h * (cos_theta + e * cos_o) * sin_i;
 
-    CartesianState state{};
     state.position = rVec;
     state.velocity = Eigen::Vector3d(vx, vy, vz);
     return state;
@@ -215,14 +224,16 @@ inline CartesianState elementsToCartesianState(double const mu, const ClassicalE
 inline ClassicalElements cartesianStateToElements(const double mu,
                                                   const Eigen::Vector3d& rVec,
                                                   const Eigen::Vector3d& vVec) {
+    ClassicalElements elements{};
+    if (mu <= 0.0) {
+        return elements;
+    }
     const double r = rVec.stableNorm();
     const double v = vVec.stableNorm();
     const Eigen::Vector3d hVec = rVec.cross(vVec);
     const double h = hVec.stableNorm();
     const Eigen::Vector3d nVec = Eigen::Vector3d::UnitZ().cross(hVec);
     const Eigen::Vector3d eVec = (((v * v) - (mu / r)) * rVec - (rVec.dot(vVec)) * vVec) / mu;
-
-    ClassicalElements elements{};
 
     elements.radiusMagnitude = r;
     elements.eccentricity = eVec.stableNorm();
