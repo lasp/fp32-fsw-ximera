@@ -107,7 +107,17 @@ void fuzzMeanToHyperbolicSolvesKepler(double N, double e) {
     EXPECT_NEAR(e * sinh(H) - H, N, kAnomalyTol);
 }
 FUZZ_TEST(OrbitalMotionFuzz, fuzzMeanToHyperbolicSolvesKepler)
-    .WithDomains(fuzztest::InRange(-50.0, 50.0), fuzztest::InRange(1.0 + 1e-6, 10.0));
+    .WithDomains(fuzztest::InRange(-50.0, 50.0), fuzztest::InRange(1.0 + 1e-10, 10.0));
+
+// Same as above but focused on e -> 1+: at H = 0, the Newton step's denominator
+// e*cosh(H) - 1 reduces to e - 1, so it shrinks toward zero as e -> 1, worsening the
+void fuzzMeanToHyperbolicSolvesKeplerNearE1(double N, double e) {
+    const double H = orbitalMotion::meanToHyperbolicAnomaly(N, e);
+    ASSERT_TRUE(std::isfinite(H));
+    EXPECT_NEAR(e * sinh(H) - H, N, kAnomalyTol);
+}
+FUZZ_TEST(OrbitalMotionFuzz, fuzzMeanToHyperbolicSolvesKeplerNearE1)
+    .WithDomains(fuzztest::InRange(-50.0, 50.0), fuzztest::InRange(1.0 + 1e-14, 1.0 + 1e-10));
 
 // H -> f -> H closed-form round-trip.
 void fuzzHyperbolicTrueRoundTrip(double H, double e) {
