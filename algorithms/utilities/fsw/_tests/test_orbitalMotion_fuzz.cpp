@@ -521,3 +521,91 @@ void fuzzParabolicHyperbolicBoundary(double e, double angle) {
 }
 FUZZ_TEST(OrbitalMotionFuzz, fuzzParabolicHyperbolicBoundary)
     .WithDomains(fuzztest::InRange(0.999, 1.001), fuzztest::InRange(-0.8, 0.8));
+
+// ============================================================================
+// Newton-Raphson iteration counts (investigating kMaxNumberOfIterations)
+//
+// The production loops don't expose how many iterations they took, so these mirror
+// the loop bodies exactly (same helpers, same orbitalMotion::kTolerance/kClamp) with a
+// counter added, and cross-check against the real function's output on every call to
+// confirm the mirror is faithful before trusting its count. A running file-scoped max is
+// logged to stderr whenever a new worst case is found, so `--fuzz_for=<duration>` prints
+// a live trace of the worst iteration counts seen and the inputs that produced them.
+// ============================================================================
+
+namespace {
+int g_maxEccentricIters = 0;
+int g_maxHyperbolicIters = 0;
+
+int solveEccentricCounting(double M, double e, double& E_out) {
+    double E = M;
+    int iters = 0;
+    for (int i = 0; i < 100000; ++i) {  // generous safety cap for the probe itself
+        const double dE = (E - e * safeSin(E) - M) / (1 - e * safeCos(E));
+        E -= fmax(-0.5, fmin(0.5, dE));
+        iters = i + 1;
+        if (fabs(dE) < orbitalMotion::kTolerance) break;
+    }
+    E_out = E;
+    return iters;
+}
+
+int solveHyperbolicCounting(double N, double e, double& H_out) {
+    const int signN = (N > 0 ? 1 : -1);
+    double H = fabs(N) > orbitalMotion::kClamp ? orbitalMotion::kClamp * static_cast<double>(signN) : N;
+    int iters = 0;
+    for (int i = 0; i < 100000; ++i) {  // generous safety cap for the probe itself
+        const double dH = (e * safeSinH(H) - H - N) / (e * safeCosH(H) - 1);
+        H -= fmax(-0.5, fmin(0.5, dH));
+        iters = i + 1;
+        if (fabs(dH) < orbitalMotion::kTolerance) break;
+    }
+    H_out = H;
+    return iters;
+}
+}  // namespace
+
+void fuzzMeanToEccentricIterationCount(double M, double e) {
+    double E_mirror = 0.0;
+    const int iters = solveEccentricCounting(M, e, E_mirror);
+    const double E_real = orbitalMotion::meanToEccentricAnomaly(M, e);
+    ASSERT_DOUBLE_EQ(E_mirror, E_real)
+        << "mirror diverged from the real solver; iteration count below is untrustworthy";
+    EXPECT_LE(iters, orbitalMotion::kMaxNumberOfIterations);
+    if (iters > g_maxEccentricIters) {
+        g_maxEccentricIters = iters;
+        fprintf(stderr, "[eccentric] new max iters=%d at M=%.17g e=%.17g\n", iters, M, e);
+    }
+}
+FUZZ_TEST(OrbitalMotionFuzz, fuzzMeanToEccentricIterationCount)
+    .WithDomains(fuzztest::InRange(-M_PI, M_PI), fuzztest::InRange(0.0, 0.999));
+
+void fuzzMeanToHyperbolicIterationCount(double N, double e) {
+    double H_mirror = 0.0;
+    const int iters = solveHyperbolicCounting(N, e, H_mirror);
+    const double H_real = orbitalMotion::meanToHyperbolicAnomaly(N, e);
+    ASSERT_DOUBLE_EQ(H_mirror, H_real)
+        << "mirror diverged from the real solver; iteration count below is untrustworthy";
+    EXPECT_LE(iters, orbitalMotion::kMaxNumberOfIterations);
+    if (iters > g_maxHyperbolicIters) {
+        g_maxHyperbolicIters = iters;
+        fprintf(stderr, "[hyperbolic] new max iters=%d at N=%.17g e=%.17g\n", iters, N, e);
+    }
+}
+FUZZ_TEST(OrbitalMotionFuzz, fuzzMeanToHyperbolicIterationCount)
+    .WithDomains(fuzztest::InRange(-50.0, 50.0), fuzztest::InRange(1.0 + 1e-10, 10.0));
+
+void fuzzMeanToHyperbolicIterationCountNearE1(double N, double e) {
+    double H_mirror = 0.0;
+    const int iters = solveHyperbolicCounting(N, e, H_mirror);
+    const double H_real = orbitalMotion::meanToHyperbolicAnomaly(N, e);
+    ASSERT_DOUBLE_EQ(H_mirror, H_real)
+        << "mirror diverged from the real solver; iteration count below is untrustworthy";
+    EXPECT_LE(iters, orbitalMotion::kMaxNumberOfIterations);
+    if (iters > g_maxHyperbolicIters) {
+        g_maxHyperbolicIters = iters;
+        fprintf(stderr, "[hyperbolic near e=1] new max iters=%d at N=%.17g e=%.17g\n", iters, N, e);
+    }
+}
+FUZZ_TEST(OrbitalMotionFuzz, fuzzMeanToHyperbolicIterationCountNearE1)
+    .WithDomains(fuzztest::InRange(-50.0, 50.0), fuzztest::InRange(1.0 + 1e-14, 1.0 + 1e-10));

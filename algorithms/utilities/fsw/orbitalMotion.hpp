@@ -11,9 +11,9 @@
 
 namespace orbitalMotion {
 
-inline constexpr int kMaxNumberOfIterations = 200;  //!< Newton-Raphson iteration cap (meanTo*Anomaly solvers)
-inline constexpr double kClamp = 7;                 //!< Initial hyperbolic-anomaly guess clamp, radians
-inline constexpr double kTolerance = 1e-9;          //!< Convergence/degeneracy tolerance used throughout this file
+inline constexpr int kMaxNumberOfIterations = 40;  //!< Newton-Raphson iteration cap (meanTo*Anomaly solvers)
+inline constexpr double kClamp = 7;                //!< Initial hyperbolic-anomaly guess clamp, radians
+inline constexpr double kTolerance = 1e-9;         //!< Convergence/degeneracy tolerance used throughout this file
 
 struct CartesianState {
     Eigen::Vector3d position;
