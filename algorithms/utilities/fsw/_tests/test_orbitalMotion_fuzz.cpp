@@ -404,7 +404,7 @@ FUZZ_TEST(OrbitalMotionFuzz, fuzzExactParabolicOrbitEquation)
                  fuzztest::InRange(0.0, M_PI),
                  fuzztest::InRange(0.0, 2 * M_PI),
                  fuzztest::InRange(0.0, 2 * M_PI),
-                 fuzztest::InRange(-2.5, 2.5));
+                 fuzztest::InRange(-M_PI + 1e-4, M_PI - 1e-4));
 
 // Angles are periodic in 2*pi, but cartesianStateToElements normalizes RAAN,
 // argPeriapsis, and trueAnomaly to [0, 2*pi).
@@ -439,10 +439,10 @@ void fuzzExactParabolicElementsRoundTrip(double radiusPeriapsis, double i, doubl
 }
 FUZZ_TEST(OrbitalMotionFuzz, fuzzExactParabolicElementsRoundTrip)
     .WithDomains(fuzztest::InRange(1.0e5, 1.0e8),
-                 fuzztest::InRange(0.05, M_PI - 0.05),
+                 fuzztest::InRange(0.05, M_PI - 1e-4),
                  fuzztest::InRange(0.0, 2 * M_PI),
                  fuzztest::InRange(0.0, 2 * M_PI),
-                 fuzztest::InRange(-2.5, 2.5));
+                 fuzztest::InRange(-M_PI + 1e-4, M_PI - 1e-4));
 
 // Hyperbolic anomaly functions must stay finite for e just above 1.
 void fuzzNearParabolicHyperbolicAnomalyFinite(double H, double e) {

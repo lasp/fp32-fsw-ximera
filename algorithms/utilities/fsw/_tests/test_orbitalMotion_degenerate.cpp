@@ -136,14 +136,8 @@ TEST(ParabolicOrbitTest, MeanToEccentric_RejectsParabolic) {
     EXPECT_THROW(orbitalMotion::meanToEccentricAnomaly(0.5, 1.0), fsw::domain_error);
 }
 
-// elementsToCartesianState with a = r_p/(1-e): for e = 1 this is Inf,
-// so p = a(1-e^2) = Inf * 0, which is NaN. Set a directly from the parabolic
-// semi-latus rectum p = 2*r_p, with a = 0 (the parabolic limit stored by
-// cartesianStateToElements). This exercises the h = 0 branch explicitly.
-TEST(ParabolicOrbitTest, ElementsToCartesian_ZeroSemiMajorAxis_VelocityInfinite) {
-    // cartesianStateToElements sets semiMajorAxis = 0 when alpha ~ 0.
-    // Passing that back through elementsToCartesianState gives p = 0, h = 0,
-    // and velocity = mu/0 = +/-Inf.  This test documents the singularity.
+// p = 0 here, so r = p/(1+cos f) = 0, which triggers the r <= 0 guard.
+TEST(ParabolicOrbitTest, ElementsToCartesian_ZeroSemiMajorAxis_ReturnsDegenerateZeroState) {
     ClassicalElements el;
     el.semiMajorAxis = 0.0;  // as stored after round-trip through parabolic state
     el.eccentricity = 1.0;
@@ -154,13 +148,80 @@ TEST(ParabolicOrbitTest, ElementsToCartesian_ZeroSemiMajorAxis_VelocityInfinite)
 
     const CartesianState state = orbitalMotion::elementsToCartesianState(kMuEarth, el);
 
-    // Position is zero (r = p/(1+cos f) = 0/2 = 0) -- finite but degenerate.
-    for (int i = 0; i < 3; ++i) {
-        EXPECT_TRUE(std::isfinite(state.position[i])) << "position[" << i << ']';
+    EXPECT_TRUE(state.position.isZero());
+    EXPECT_TRUE(state.velocity.isZero());
+}
+
+// f = pi makes 1+cos(f) = 0 exactly (p > 0 here), triggering the !isfinite(r) guard.
+TEST(ParabolicOrbitTest, TrueAnomalyAtPi_ReturnsDegenerateZeroState) {
+    ClassicalElements el;
+    el.semiMajorAxis = 0.0;
+    el.eccentricity = 1.0;
+    el.inclination = 0.3;
+    el.rightAscensionAscendingNode = 0.0;
+    el.argPeriapsis = 0.0;
+    el.trueAnomaly = M_PI;
+    el.radiusPeriapsis = kRpM;  // p = 2*radiusPeriapsis > 0
+
+    const CartesianState state = orbitalMotion::elementsToCartesianState(kMuEarth, el);
+
+    EXPECT_TRUE(state.position.isZero());
+    EXPECT_TRUE(state.velocity.isZero());
+}
+
+// e=2, f=2.5 rad is past the asymptote (arccos(-0.5) ~ 2.094 rad), so 1+e*cos(f) < 0.
+TEST(HyperbolicOrbitTest, TrueAnomalyPastAsymptote_ReturnsDegenerateZeroState) {
+    ClassicalElements el;
+    el.semiMajorAxis = -kRpM;  // hyperbolic convention: a < 0
+    el.eccentricity = 2.0;
+    el.inclination = 0.3;
+    el.rightAscensionAscendingNode = 0.0;
+    el.argPeriapsis = 0.0;
+    el.trueAnomaly = 2.5;
+
+    const CartesianState state = orbitalMotion::elementsToCartesianState(kMuEarth, el);
+
+    EXPECT_TRUE(state.position.isZero());
+    EXPECT_TRUE(state.velocity.isZero());
+}
+
+// ============================================================================
+// Invalid gravitational parameter (mu <= 0)
+// ============================================================================
+
+TEST(InvalidGravitationalParameterTest, NonPositiveMu_ReturnsDegenerateZeroState) {
+    ClassicalElements el;
+    el.semiMajorAxis = kRpM / (1.0 - 0.3);
+    el.eccentricity = 0.3;
+    el.inclination = 0.3;
+    el.rightAscensionAscendingNode = 0.5;
+    el.argPeriapsis = 0.2;
+    el.trueAnomaly = 0.4;
+
+    for (const double mu : {0.0, -1.0, -kMuEarth}) {
+        const CartesianState state = orbitalMotion::elementsToCartesianState(mu, el);
+        EXPECT_TRUE(state.position.isZero()) << "mu=" << mu;
+        EXPECT_TRUE(state.velocity.isZero()) << "mu=" << mu;
     }
-    // Velocity diverges: v = mu/h * (...), h = 0.
-    const double v2 = state.velocity.squaredNorm();
-    EXPECT_FALSE(std::isfinite(v2)) << "Expected infinite velocity for zero-a parabolic input; got " << v2;
+}
+
+TEST(InvalidGravitationalParameterTest, CartesianToElements_NonPositiveMu_ReturnsDefaultElements) {
+    const Eigen::Vector3d rVec(kRpM, 0.0, 0.0);
+    const Eigen::Vector3d vVec(0.0, 7500.0, 0.0);
+
+    for (const double mu : {0.0, -1.0, -kMuEarth}) {
+        const ClassicalElements el = orbitalMotion::cartesianStateToElements(mu, rVec, vVec);
+        EXPECT_EQ(el.semiMajorAxis, 0.0) << "mu=" << mu;
+        EXPECT_EQ(el.eccentricity, 0.0) << "mu=" << mu;
+        EXPECT_EQ(el.inclination, 0.0) << "mu=" << mu;
+        EXPECT_EQ(el.rightAscensionAscendingNode, 0.0) << "mu=" << mu;
+        EXPECT_EQ(el.argPeriapsis, 0.0) << "mu=" << mu;
+        EXPECT_EQ(el.trueAnomaly, 0.0) << "mu=" << mu;
+        EXPECT_EQ(el.radiusMagnitude, 0.0) << "mu=" << mu;
+        EXPECT_EQ(el.alpha, 0.0) << "mu=" << mu;
+        EXPECT_EQ(el.radiusPeriapsis, 0.0) << "mu=" << mu;
+        EXPECT_EQ(el.radiusApoapsis, 0.0) << "mu=" << mu;
+    }
 }
 
 // ============================================================================
