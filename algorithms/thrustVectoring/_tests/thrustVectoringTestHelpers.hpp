@@ -59,7 +59,7 @@ inline void regressionTestThrustVectoring(const Eigen::Vector3f& sigma_MB,
     EXPECT_LT((out.r_TB_B - (r_MB_B - (armLength * out.tHat_B))).norm(), accuracy);
 
     // The wide cone must not have clamped, which the torque expectation below relies on.
-    const Eigen::Vector3f tHatNeutral_B = mrpToDcm(mrpSwitch(sigma_MB)).transpose() * -Eigen::Vector3f::UnitZ();
+    const Eigen::Vector3f tHatNeutral_B = mrpToDcm(mrpSwitch(sigma_MB)).transpose() * Eigen::Vector3f::UnitZ();
     ASSERT_GT(tHatNeutral_B.dot(out.tHat_B), std::cos(kWideCone)) << "Test setup: the deflection cone must not clamp";
 
     // The delivered torque is the request projected onto the reachable disk: perpendicular to r_MC, and no larger

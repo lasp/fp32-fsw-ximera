@@ -22,11 +22,11 @@ def test_thrust_vectoring(delta_cm, arm_length, torque_request, theta_max, seed,
     # independent of execution order.
     np.random.seed(int(seed))
 
-    # The mount frame is defined with its -z axis along the un-deflected thrust, so sigma_MB carries the
+    # The mount frame is defined with its +z axis along the un-deflected thrust, so sigma_MB carries the
     # thruster's mounting orientation.
     euler_angles_123 = np.array([5.0 * macros.D2R, 10.0 * macros.D2R, 0.0])
     sigma_MB = np.array(rbk.euler1232MRP(euler_angles_123))
-    r_MB_B = np.array([0.0, 0.1, 1.4])
+    r_MB_B = np.array([0.0, 0.1, -1.4])
     thrust = 10.0
 
     r_CB_B = np.random.rand(3)
@@ -62,7 +62,7 @@ def test_thrust_vectoring(delta_cm, arm_length, torque_request, theta_max, seed,
     # this description and takes only the magnitude from it.
     thr_config_message = messaging.THRConfigMsgF32Payload()
     thr_config_message.rThrust_B = np.array([0.0, 0.0, 0.0])
-    thr_config_message.tHatThrust_B = np.array([0.0, 0.0, -1.0])
+    thr_config_message.tHatThrust_B = np.array([0.0, 0.0, 1.0])
     thr_config_message.maxThrust = thrust
     thr_config_in_msg = messaging.THRConfigMsgF32().write(thr_config_message)
     module.thrusterConfigFInMsg.subscribeTo(thr_config_in_msg)
@@ -95,7 +95,7 @@ def test_thrust_vectoring(delta_cm, arm_length, torque_request, theta_max, seed,
 
     # The thrust deflection from its neutral, un-rotated direction stays within the configured cone.
     dcm_MB = rbk.MRP2C(sigma_MB)
-    neutral_B = np.matmul(dcm_MB.transpose(), np.array([0.0, 0.0, -1.0]))
+    neutral_B = np.matmul(dcm_MB.transpose(), np.array([0.0, 0.0, 1.0]))
     deflection = np.arccos(np.clip(np.dot(neutral_B, tHat_B), -1.0, 1.0))
     np.testing.assert_array_less(deflection, theta_max + accuracy, verbose=True)
 
@@ -139,7 +139,7 @@ def test_thrust_vectoring_latches_configuration_at_reset():
     sim.AddModelToTask(task_name, module)
 
     module.sigma_MB = np.array([0.0, 0.0, 0.0])
-    module.r_MB_B = np.array([0.0, 0.1, 1.4])
+    module.r_MB_B = np.array([0.0, 0.1, -1.4])
     module.armLength = 0.1
     module.thetaMax = np.pi / 2
 
@@ -150,7 +150,7 @@ def test_thrust_vectoring_latches_configuration_at_reset():
 
     thr_config_message = messaging.THRConfigMsgF32Payload()
     thr_config_message.rThrust_B = np.array([0.0, 0.0, 0.0])
-    thr_config_message.tHatThrust_B = np.array([0.0, 0.0, -1.0])
+    thr_config_message.tHatThrust_B = np.array([0.0, 0.0, 1.0])
     thr_config_message.maxThrust = 10.0
     thr_config_in_msg = messaging.THRConfigMsgF32().write(thr_config_message)
     module.thrusterConfigFInMsg.subscribeTo(thr_config_in_msg)

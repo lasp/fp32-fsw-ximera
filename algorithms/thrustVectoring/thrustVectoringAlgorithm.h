@@ -13,7 +13,7 @@ inline constexpr float kMinR_CM = 1e-3F;
 
 /*! @brief Mounting geometry of the platform on the hub and the limit on how far it may deflect the thrust.
  *
- * The mount frame M is defined with its -z axis along the un-deflected thrust direction, so sigma_MB carries the
+ * The mount frame M is defined with its +z axis along the un-deflected thrust direction, so sigma_MB carries the
  * thruster's mounting orientation on the hub.
  */
 struct ThrustVectoringPlatformConfiguration {
@@ -24,7 +24,7 @@ struct ThrustVectoringPlatformConfiguration {
 
 /*! @brief Thruster configuration
  *
- * The thrust acts along the platform's -z axis and is applied armLength behind the pivot M along that axis, so
+ * The thrust acts along the platform's +z axis and is applied armLength behind the pivot M along that axis, so
  * its line of action runs through M whatever the platform orientation.
  */
 struct ThrustVectoringThrusterConfiguration {
@@ -109,7 +109,7 @@ class ThrustVectoringConfig final {
     static bool isThrustDirectedInboard(const ThrustVectoringPlatformConfiguration& platformConfig,
                                         const Eigen::Vector3f& r_CB_B) {
         const Eigen::Vector3f tHatNeutral_B =
-            -mrpToDcm(mrpSwitch(platformConfig.sigma_MB)).row(2).transpose().normalized();
+            mrpToDcm(mrpSwitch(platformConfig.sigma_MB)).row(2).transpose().normalized();
         return (platformConfig.r_MB_B - r_CB_B).stableNormalized().dot(tHatNeutral_B) < 0.0F;
     }
 
@@ -146,9 +146,9 @@ class ThrustVectoringAlgorithm final {
 
    private:
     ThrustVectoringConfig cfg;  //!< [-] validated configuration
-    //! [-] un-deflected thrust direction, body frame: the mount frame's -z axis, resolved from sigma_MB whenever
+    //! [-] un-deflected thrust direction, body frame: the mount frame's +z axis, resolved from sigma_MB whenever
     //! the configuration is set, so the per-cycle solve never has to rotate anything
-    Eigen::Vector3f tHatNeutral_B{-Eigen::Vector3f::UnitZ()};
+    Eigen::Vector3f tHatNeutral_B{Eigen::Vector3f::UnitZ()};
 };
 
 #endif  // F32XMERA_THRUST_VECTORING_ALGORITHM_H

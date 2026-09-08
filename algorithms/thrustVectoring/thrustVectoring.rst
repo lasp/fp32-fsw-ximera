@@ -13,7 +13,7 @@ accumulated on the reaction wheels, so that the thruster offset dumps that momen
 pointing problem for whatever torque it is handed.
 
 The thruster is mounted so its line of action runs through the platform joint: it fires along the platform
-frame's :math:`-z` axis from a point on that axis. That makes the reference a **closed-form solve** -- no
+frame's :math:`+z` axis from a point on that axis. That makes the reference a **closed-form solve** -- no
 iteration, no state, and no dependence on the previous cycle.
 
 All numeric computation is single-precision (``float`` / fp32). The module is a single algorithm
@@ -85,16 +85,16 @@ Mathematical Formulation
 Frames and mounting
 ^^^^^^^^^^^^^^^^^^^
 The platform pivots about the hub-fixed joint :math:`M`. The mount frame :math:`\mathcal{M}` is defined with its
-:math:`-z` axis along the **un-deflected thrust direction**, so ``sigma_MB`` carries the thruster's mounting
+:math:`+z` axis along the **un-deflected thrust direction**, so ``sigma_MB`` carries the thruster's mounting
 orientation on the hub. The platform frame :math:`\mathcal{F}` shares that convention: the thrust acts along
-:math:`-z_\mathcal{F}`, applied at the point ``armLength`` behind :math:`M` along that axis.
+:math:`+z_\mathcal{F}`, applied at the point ``armLength`` behind :math:`M` along that axis.
 
 Resolved into body-frame coordinates, that axis is written
 
 .. math::
-    \hat{\boldsymbol{t}}_0 = -[\mathcal{MB}]^T\,\hat{\boldsymbol{z}}_\mathcal{M},
+    \hat{\boldsymbol{t}}_0 = [\mathcal{MB}]^T\,\hat{\boldsymbol{z}}_\mathcal{M},
 
-i.e. the negated third row of :math:`[\mathcal{MB}]`. It is the only quantity the mount frame contributes at run
+i.e. the third row of :math:`[\mathcal{MB}]`. It is the only quantity the mount frame contributes at run
 time, and is computed once when the configuration is set. The deflection cone is measured from it, and it settles
 the choice between the two solutions the pointing solve admits.
 
@@ -249,7 +249,7 @@ raises ``fsw::invalid_argument``.
       - [0, 0, 0]
       - finite
       - MRP relative rotation between body-fixed frames :math:`\mathcal{M}` and :math:`\mathcal{B}`. The
-        :math:`\mathcal{M}` frame's :math:`-z` axis is the un-deflected thrust direction, so this carries the
+        :math:`\mathcal{M}` frame's :math:`+z` axis is the un-deflected thrust direction, so this carries the
         thruster's mounting orientation
     * - ``r_MB_B``
       - [0, 0, 0]
@@ -271,7 +271,7 @@ finite, and the thrust magnitude ``maxThrust`` must be finite and positive -- a 
 action to point and is rejected.
 
 The other two fields of ``thrusterConfigFInMsg`` are not free parameters but a **mounting contract**, and are
-checked rather than used: ``rThrust_B`` must be zero and ``tHatThrust_B`` must be :math:`[0, 0, -1]`, because the
+checked rather than used: ``rThrust_B`` must be zero and ``tHatThrust_B`` must be :math:`[0, 0, 1]`, because the
 module's whole formulation rests on the line of action running through the joint. A thruster description that
 says otherwise -- an offset nozzle, or a canted one -- is rejected at ``reset()`` rather than silently pointed as
 if the assumption held.
@@ -314,7 +314,7 @@ re-read both messages and rebuild the configuration; the runtime state is preser
 Module Assumptions and Limitations
 ----------------------------------
 **Assumption.** The thrust line of action goes through the platform joint :math:`M`. The thruster fires along
-:math:`-z_\mathcal{F}` from a point on that axis. This is a statement about the hardware. The module cannot
+:math:`+z_\mathcal{F}` from a point on that axis. This is a statement about the hardware. The module cannot
 examine the thruster, thus it cannot identify a nozzle with an offset or a different direction. For such a
 thruster the reference orientation is incorrect. ``reset()`` can compare only the thruster description in the
 input message with this assumption (see *Module Parameters*).

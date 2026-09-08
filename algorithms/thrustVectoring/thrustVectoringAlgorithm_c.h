@@ -16,7 +16,7 @@ typedef struct ThrustVectoringAlgorithmHandle ThrustVectoringAlgorithmHandle;
 
 /**
  * @brief Report whether a configuration would be accepted by create/setConfig.
- * @param sigma_MB  MRP of the M frame w.r.t. the B frame; must be finite. The M frame's -z axis is the
+ * @param sigma_MB  MRP of the M frame w.r.t. the B frame; must be finite. The M frame's +z axis is the
  *                  un-deflected thrust direction.
  * @param r_MB_B    M frame origin w.r.t. B origin, B coordinates; must be finite.
  * @param thetaMax  [rad] thrust-deflection cone half-angle; must lie in the open interval (0, pi).

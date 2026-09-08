@@ -74,7 +74,7 @@ ThrustVectoringAlgorithm::ThrustVectoringAlgorithm(const ThrustVectoringConfig& 
 */
 void ThrustVectoringAlgorithm::setConfig(const ThrustVectoringConfig& config) {
     this->cfg = config;
-    this->tHatNeutral_B = -mrpToDcm(this->cfg.getPlatformConfiguration().sigma_MB).row(2).transpose().normalized();
+    this->tHatNeutral_B = mrpToDcm(this->cfg.getPlatformConfiguration().sigma_MB).row(2).transpose().normalized();
 }
 
 /*! This method computes the platform reference orientation that points the thruster so it produces the requested
