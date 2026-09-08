@@ -144,7 +144,7 @@ TEST(AxisToGimbalAnglesTest, NonFiniteDirectionGivesHomePosition) {
     constexpr float nan = std::numeric_limits<float>::quiet_NaN();
     const AxisToGimbalAnglesAlgorithm alg{makeConfig(Eigen::Vector3f::Zero())};
 
-    EXPECT_NEAR(alg.update({nan, 0.0F, -1.0F}).gimbalAngle1, 0.0F, kAccuracy);
+    EXPECT_NEAR(alg.update({nan, 0.0F, 1.0F}).gimbalAngle1, 0.0F, kAccuracy);
     EXPECT_NEAR(alg.update({0.0F, 0.0F, nan}).gimbalAngle2, 0.0F, kAccuracy);
 }
 
