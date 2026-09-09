@@ -2,15 +2,14 @@
 #define F32XMERA_INERTIALFILTER_H
 
 #include "inertialFilterAlgorithm.h"
+#include "msgPayloadDef/FilterMsgF32Payload.h"
+#include "msgPayloadDef/FilterResidualsMsgF32Payload.h"
+#include "msgPayloadDef/IMUSensorBodyMsgF32Payload.h"
+#include "msgPayloadDef/NavAttMsgF32Payload.h"
+#include "msgPayloadDef/STAttMsgF32Payload.h"
 
 #include <architecture/_GeneralModuleFiles/sys_model.h>
 #include <architecture/messaging/messaging.h>
-#include <architecture/msgPayloadDef/AccDataMsgPayload.h>
-#include <architecture/msgPayloadDef/AccPktDataMsgPayload.h>
-#include <architecture/msgPayloadDef/FilterMsgPayload.h>
-#include <architecture/msgPayloadDef/FilterResidualsMsgPayload.h>
-#include <architecture/msgPayloadDef/NavAttMsgPayload.h>
-#include <architecture/msgPayloadDef/STAttMsgPayload.h>
 
 #include <Eigen/Core>
 
@@ -39,13 +38,13 @@ class InertialFilter : public SysModel {
     double stMeasurementNoiseStd = 0.0;    //!< [-] star-tracker attitude measurement noise std (>= 0)
     double gyroMeasurementNoiseStd = 0.0;  //!< [rad/s] gyro measurement noise std (>= 0)
 
-    ReadFunctor<STAttMsgPayload> stAttInMsg;      //!< star-tracker attitude input (required)
-    ReadFunctor<AccDataMsgPayload> gyrBuffInMsg;  //!< gyro buffer input (optional)
+    ReadFunctor<STAttMsgF32Payload> stAttInMsg;                  //!< star-tracker attitude input (required)
+    ReadFunctor<IMUSensorBodyMsgF32Payload> imuSensorBodyInMsg;  //!< majority-voted MIMU body rate input (optional)
 
-    Message<NavAttMsgPayload> navAttOutMsg;                  //!< estimated attitude + rate output
-    Message<FilterMsgPayload> filterOutMsg;                  //!< full filter state + covariance output
-    Message<FilterResidualsMsgPayload> filterStResOutMsg;    //!< star-tracker residuals output
-    Message<FilterResidualsMsgPayload> filterGyroResOutMsg;  //!< gyro residuals output
+    Message<NavAttMsgF32Payload> navAttOutMsg;                  //!< estimated attitude + rate output
+    Message<FilterMsgF32Payload> filterOutMsg;                  //!< full filter state + covariance output
+    Message<FilterResidualsMsgF32Payload> filterStResOutMsg;    //!< star-tracker residuals output
+    Message<FilterResidualsMsgF32Payload> filterGyroResOutMsg;  //!< gyro residuals output
 
    private:
     void writeOutputMessages(uint64_t currentSimNanos,

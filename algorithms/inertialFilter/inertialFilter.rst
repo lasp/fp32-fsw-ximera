@@ -2,7 +2,9 @@ Executive Summary
 -----------------
 This module estimates the inertial-to-body attitude (as a Modified Rodrigues Parameter set) and the body
 angular rate using a square-root unscented Kalman filter (SRuKF), fusing star-tracker attitude
-measurements and gyro rates on a single measurement timeline. All computation is double precision.
+measurements and gyro rates on a single measurement timeline. All computation is double precision; the
+message interface is fp32, so the adapter widens the incoming measurements and narrows the estimated
+attitude and body rate at the message boundary.
 
 The module is split into an xmera ``SysModel`` adapter (``InertialFilter``) and a framework-agnostic
 algorithm (``InertialFilterAlgorithm``). The algorithm is a thin, problem-specific layer over the
@@ -26,23 +28,28 @@ for.
       - Msg Type
       - Description
     * - stAttInMsg
-      - :ref:`STAttMsgPayload`
+      - :ref:`STAttMsgF32Payload`
       - Input star-tracker attitude measurement (inertial-to-body MRP); required
-    * - gyrBuffInMsg
-      - :ref:`AccDataMsgPayload`
-      - Input gyro buffer; the first packet's body-frame rate is used as the gyro measurement (optional)
+    * - imuSensorBodyInMsg
+      - :ref:`IMUSensorBodyMsgF32Payload`
+      - Input majority-voted MIMU data; its body-frame angular velocity (``AngVelBody``) is used as the
+        gyro measurement. Produced by :ref:`mimuMajorityVote`'s ``imuSensorBodyOutMsg`` (optional)
     * - navAttOutMsg
-      - :ref:`NavAttMsgPayload`
+      - :ref:`NavAttMsgF32Payload`
       - Output message containing the estimated attitude and body rate
     * - filterOutMsg
-      - :ref:`FilterMsgPayload`
+      - :ref:`FilterMsgF32Payload`
       - Output message with the filter estimated state and covariance
     * - filterStResOutMsg
-      - :ref:`FilterResidualsMsgPayload`
+      - :ref:`FilterResidualsMsgF32Payload`
       - Output message containing pre- and post-fit residuals for the star-tracker measurements
     * - filterGyroResOutMsg
-      - :ref:`FilterResidualsMsgPayload`
+      - :ref:`FilterResidualsMsgF32Payload`
       - Output message containing pre- and post-fit residuals for the gyro measurements
+
+The star-tracker time tag arrives as a ``float`` and is widened to ``double`` for the filter, so it must
+carry mission-elapsed seconds rather than an epoch-scale time. ``IMUSensorBodyMsgF32Payload`` has no time
+field, so the rate measurement is tagged at the module call time.
 
 
 Detailed Module Description
@@ -193,7 +200,7 @@ configuration::
     np.fill_diagonal(processNoise, [sigmaAtt] * 3 + [sigmaRate] * 3)
     filter.processNoise = processNoise.tolist()
 
-    # Connect the input/output messages (stAttInMsg required, gyrBuffInMsg optional, ...), then the
+    # Connect the input/output messages (stAttInMsg required, imuSensorBodyInMsg optional, ...), then the
     # simulation calls reset() once before stepping. To restart the filter at runtime, call
     # reInitialize() (state + covariance reset to the configured seed) or reInitializeExceptPersistentStates() (keep the
     # current estimate, clear only the pending measurements and residual snapshots).

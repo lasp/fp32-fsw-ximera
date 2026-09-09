@@ -98,9 +98,9 @@ def stateUpdateInertialAttitude(show_plots):
     filterLog = module.filterOutMsg.recorder()
     unitTestSim.AddModelToTask(unitTaskName, filterLog)
 
-    stMessage = messaging.STAttMsgPayload()
+    stMessage = messaging.STAttMsgF32Payload()
     stMessage.MRP_BdyInrtl = [0.3, 0.4, 0.5]
-    stInMsg = messaging.STAttMsg()
+    stInMsg = messaging.STAttMsgF32()
     module.stAttInMsg.subscribeTo(stInMsg)
 
     unitTestSim.InitializeSimulation()
@@ -188,13 +188,13 @@ def stateUpdateRate(show_plots):
     time = np.linspace(0, num_steps * dt, num_steps + 1)
     truth = rk4(mrp_integration, time, np.array([0.0, 0.0, 0.0, *truthRate]), mrpShadow=True)
 
-    stMessage = messaging.STAttMsgPayload()
-    stInMsg = messaging.STAttMsg()
+    stMessage = messaging.STAttMsgF32Payload()
+    stInMsg = messaging.STAttMsgF32()
     module.stAttInMsg.subscribeTo(stInMsg)
 
-    gyroBuffer = messaging.AccDataMsgPayload()
-    gyroInMsg = messaging.AccDataMsg()
-    module.gyrBuffInMsg.subscribeTo(gyroInMsg)
+    imuMessage = messaging.IMUSensorBodyMsgF32Payload()
+    imuInMsg = messaging.IMUSensorBodyMsgF32()
+    module.imuSensorBodyInMsg.subscribeTo(imuInMsg)
 
     np.random.seed(0)
     stSigma = module.stMeasurementNoiseStd
@@ -204,10 +204,10 @@ def stateUpdateRate(show_plots):
     for i in range(num_steps):
         stMessage.timeTag = time[i]
         stMessage.MRP_BdyInrtl = (truth[i, 1:4] + np.random.normal(0, stSigma, 3)).tolist()
-        gyroBuffer.accPkts[0].gyro_B = (truthRate + np.random.normal(0, gyroSigma, 3)).tolist()
+        imuMessage.AngVelBody = (truthRate + np.random.normal(0, gyroSigma, 3)).tolist()
         if i > 5:
             stInMsg.write(stMessage, macros.sec2nano(time[i]))
-            gyroInMsg.write(gyroBuffer, macros.sec2nano(time[i]))
+            imuInMsg.write(imuMessage, macros.sec2nano(time[i]))
         unitTestSim.ConfigureStopTime(macros.sec2nano(time[i + 1]))
         unitTestSim.ExecuteSimulation()
 
@@ -302,13 +302,13 @@ def outlierRecovery(show_plots):
     time = np.linspace(0, num_steps * dt, num_steps + 1)
     truth = rk4(mrp_integration, time, np.array([0.0, 0.0, 0.0, *truthRate]), mrpShadow=True)
 
-    stMessage = messaging.STAttMsgPayload()
-    stInMsg = messaging.STAttMsg()
+    stMessage = messaging.STAttMsgF32Payload()
+    stInMsg = messaging.STAttMsgF32()
     module.stAttInMsg.subscribeTo(stInMsg)
 
-    gyroBuffer = messaging.AccDataMsgPayload()
-    gyroInMsg = messaging.AccDataMsg()
-    module.gyrBuffInMsg.subscribeTo(gyroInMsg)
+    imuMessage = messaging.IMUSensorBodyMsgF32Payload()
+    imuInMsg = messaging.IMUSensorBodyMsgF32()
+    module.imuSensorBodyInMsg.subscribeTo(imuInMsg)
 
     np.random.seed(0)
     stSigma = module.stMeasurementNoiseStd
@@ -341,8 +341,8 @@ def outlierRecovery(show_plots):
             stMessage.timeTag = time[i] + st_time_nudge
             stMessage.MRP_BdyInrtl = stValue.tolist()
             stInMsg.write(stMessage, macros.sec2nano(time[i]))
-            gyroBuffer.accPkts[0].gyro_B = gyroValue.tolist()
-            gyroInMsg.write(gyroBuffer, macros.sec2nano(time[i]))
+            imuMessage.AngVelBody = gyroValue.tolist()
+            imuInMsg.write(imuMessage, macros.sec2nano(time[i]))
         unitTestSim.ConfigureStopTime(macros.sec2nano(time[i + 1]))
         unitTestSim.ExecuteSimulation()
 
@@ -427,9 +427,9 @@ def statePropagation(show_plots):
 
     # Connect a star-tracker input but never give it a fresh time tag, so no measurement
     # fires and the filter only propagates.
-    stMessage = messaging.STAttMsgPayload()
+    stMessage = messaging.STAttMsgF32Payload()
     stMessage.timeTag = -1
-    stInMsg = messaging.STAttMsg().write(stMessage)
+    stInMsg = messaging.STAttMsgF32().write(stMessage)
     module.stAttInMsg.subscribeTo(stInMsg)
 
     initState = np.array(module.initialState)
@@ -516,8 +516,8 @@ def delayedMeasurement(show_plots):
         stResLog = module.filterStResOutMsg.recorder()
         unitTestSim.AddModelToTask("unitTask", stResLog)
 
-        stMessage = messaging.STAttMsgPayload()
-        stInMsg = messaging.STAttMsg()
+        stMessage = messaging.STAttMsgF32Payload()
+        stInMsg = messaging.STAttMsgF32()
         module.stAttInMsg.subscribeTo(stInMsg)
 
         unitTestSim.InitializeSimulation()
