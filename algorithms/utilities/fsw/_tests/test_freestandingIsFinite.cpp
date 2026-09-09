@@ -36,6 +36,10 @@
 #include <random>
 #include <string>
 
+#if defined(_MSC_VER)
+#include <float.h>  // _finite: MSVC has no __builtin_isfinite
+#endif
+
 namespace {
 
 //----------------------------------------------------------------------------
@@ -54,9 +58,21 @@ namespace {
     return std::bit_cast<double>(v);
 }
 
+// Second finite check, independent of std::isfinite, to guard against
+// common-mode oracle error. GCC/Clang expose __builtin_isfinite; MSVC has no
+// such builtin, so fall back to the CRT _finite. Both are distinct from the
+// bit-twiddling implementation under test.
+#if defined(__GNUC__) || defined(__clang__)
+inline bool independent_finite(float x) { return __builtin_isfinite(x); }
+inline bool independent_finite(double x) { return __builtin_isfinite(x); }
+#else
+inline bool independent_finite(float x) { return _finite(static_cast<double>(x)) != 0; }
+inline bool independent_finite(double x) { return _finite(x) != 0; }
+#endif
+
 // Two independent oracles to guard against common-mode oracle error.
-bool oracle_finite(float x) { return std::isfinite(x) && __builtin_isfinite(x); }
-bool oracle_finite(double x) { return std::isfinite(x) && __builtin_isfinite(x); }
+bool oracle_finite(float x) { return std::isfinite(x) && independent_finite(x); }
+bool oracle_finite(double x) { return std::isfinite(x) && independent_finite(x); }
 
 struct FCase {
     std::uint32_t bits;
