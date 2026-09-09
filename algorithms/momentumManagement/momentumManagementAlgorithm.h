@@ -2,6 +2,7 @@
 #define F32XMERA_MOMENTUM_MANAGEMENT_ALGORITHM_H
 
 #include "momentumManagementTypes.h"
+#include "msgPayloadDef/definitions.h"
 #include "utilities/fsw/freestandingInvalidArgument.h"
 #include "utilities/fsw/freestandingIsFinite.hpp"
 #include <math.h>
@@ -9,8 +10,6 @@
 
 #include <Eigen/Core>
 #include <utility>
-
-inline constexpr uint32_t kMaxNumRw = MOMENTUM_MANAGEMENT_MAX_NUM_RW;  //!< [-] maximum number of reaction wheels
 
 /*! @brief Reaction-wheel spin-axis configuration used to compute the net cluster momentum. */
 struct MomentumManagementRwArrayConfiguration {

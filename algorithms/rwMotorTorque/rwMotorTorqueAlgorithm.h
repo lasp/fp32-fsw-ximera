@@ -2,17 +2,13 @@
 #define F32XMERA_RW_MOTOR_TORQUE_ALGORITHM_H
 
 #include "msgPayloadDef/definitions.h"
-#include "rwMotorTorqueTypes.h"
 #include "utilities/fsw/deviceAvailability.h"
 #include "utilities/fsw/freestandingInvalidArgument.h"
 #include "utilities/fsw/freestandingIsFinite.hpp"
-#include <math.h>
 
+#include <math.h>
 #include <Eigen/Core>
 #include <array>
-#include <cstdint>
-
-inline constexpr uint32_t kMaxNumRw = RW_MOTOR_TORQUE_MAX_NUM_RW;
 
 /*! @brief Reaction-wheel spin-axis configuration in body-frame components. */
 struct RwMotorTorqueArrayConfiguration {
