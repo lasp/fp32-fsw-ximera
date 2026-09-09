@@ -67,10 +67,10 @@ def setup_filter_data(filter_object):
                                        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0001, 0.0],
                                        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1]]
 
-    filter_object.cssMeasurementNoiseStd = 0.01
-    filter_object.gyroMeasurementNoiseStd = 0.001
-    sigmaSun = (1E-6) ** 2
-    sigmaRate = (1E-8) ** 2
+    filter_object.cssMeasurementNoiseStd = 0.0001
+    filter_object.gyroMeasurementNoiseStd = 0.00001
+    sigmaSun = (1E-5) ** 2
+    sigmaRate = (1E-5) ** 2
     sigmaBias = (1E-5) ** 2
     filter_object.processNoise = [[sigmaSun, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                                   [0.0, sigmaSun, 0.0, 0.0, 0.0, 0.0, 0.0],

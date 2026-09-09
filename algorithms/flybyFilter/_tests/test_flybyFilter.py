@@ -61,7 +61,11 @@ def setup_filter_data(module, initial_state_si):
     module.headingMeasurementNoiseStd = HEADING_STD
     module.initialState = list(initial_state_si)
     module.initialCovariance = np.diag([1000.0 * 1E6] * 3 + [0.1 * 1E6] * 3).tolist()  # m^2, (m/s)^2
-    module.processNoise = np.diag([(1E-6) ** 2] * 3 + [(1E-8) ** 2] * 3).tolist()
+
+    qNoiseIn = np.identity(6)
+    qNoiseIn[0:3, 0:3] = qNoiseIn[0:3, 0:3] * 1 ** 2
+    qNoiseIn[3:6, 3:6] = qNoiseIn[3:6, 3:6] * 0.01 ** 2
+    module.processNoise = qNoiseIn.tolist()
 
 
 def specific_energy(states):
