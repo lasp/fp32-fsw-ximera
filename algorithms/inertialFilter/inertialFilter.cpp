@@ -1,9 +1,9 @@
 #include "inertialFilter.h"
 
 #include "inertialFilterAlgorithm.h"
+#include "utilities/fsw/timeConstants.h"
 #include "utilities/xmera/xmeraLifecycleException.h"
 
-#include <architecture/utilities/macroDefinitions.h>
 #include <utilities/fsw/eigenSupport.h>
 
 #include <Eigen/Core>
@@ -76,7 +76,7 @@ void InertialFilter::updateState(uint64_t currentSimNanos) {
         throw XmeraLifecycleException("InertialFilter reset() has not been called.");
     }
 
-    double const currentSeconds = static_cast<double>(currentSimNanos) * NANO2SEC;
+    double const currentSeconds = static_cast<double>(currentSimNanos) * kNano2Sec;
 
     StAttData stAttData{};
     RateData rateData{};
@@ -107,7 +107,7 @@ void InertialFilter::writeOutputMessages(uint64_t currentSimNanos, InertialFilte
     FilterResidualsMsgPayload stResBuf{};
     FilterResidualsMsgPayload gyroResBuf{};
 
-    double const timeTag = static_cast<double>(currentSimNanos) * NANO2SEC;
+    double const timeTag = static_cast<double>(currentSimNanos) * kNano2Sec;
 
     navAttBuf.timeTag = timeTag;
     eigenMatrixXToCArray(filterOutput.filterState.state.head<3>().eval(), navAttBuf.sigma_BN);
