@@ -16,7 +16,7 @@ extern "C" {
 typedef struct ThrDesatDutyCycleAlgorithmHandle ThrDesatDutyCycleAlgorithmHandle;
 
 /**
- * @brief Get the THR_DESAT_DUTY_CYCLE_MAX_THRUSTER_COUNT constant for Ada validation.
+ * @brief Get the MAX_EFF_CNT constant for Ada validation.
  * @return The maximum number of thrusters handled at the C boundary.
  */
 uint32_t ThrDesatDutyCycleAlgorithm_getMaxThrusterCount(void);
