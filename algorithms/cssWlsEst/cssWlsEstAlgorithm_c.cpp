@@ -8,8 +8,6 @@
 
 #include <Eigen/Core>
 
-static_assert(CSS_WLS_EST_MAX_NUM_CSS == kMaxNumCss, "CSS_WLS_EST_MAX_NUM_CSS must match kMaxNumCss");
-
 namespace {
 
 /*! Build the validated C++ configuration from its C mirror. The boresight rows are copied element by
@@ -44,7 +42,7 @@ CssWlsEstOutput_c outputToC(const CssWlsEstOutput& out) {
 
 }  // namespace
 
-uint32_t CssWlsEstAlgorithm_getMaxNumCss(void) { return CSS_WLS_EST_MAX_NUM_CSS; }
+uint32_t CssWlsEstAlgorithm_getMaxNumCss(void) { return kMaxNumCss; }
 
 bool CssWlsEstAlgorithm_validateConfig(const CssWlsEstConstellation_c* constellation,
                                        const bool useWeights,

@@ -17,7 +17,7 @@ extern "C" {
 typedef struct CssWlsEstAlgorithmHandle CssWlsEstAlgorithmHandle;
 
 /**
- * @brief Get the CSS_WLS_EST_MAX_NUM_CSS constant for Ada validation.
+ * @brief Get the MAX_NUM_CSS_SENSORS constant for Ada validation.
  * @return The maximum number of coarse sun sensors handled at the C boundary.
  */
 uint32_t CssWlsEstAlgorithm_getMaxNumCss(void);
