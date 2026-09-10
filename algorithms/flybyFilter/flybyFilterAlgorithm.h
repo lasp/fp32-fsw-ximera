@@ -46,7 +46,7 @@ class FlybyFilterConfig final {
                                     StateMatrix const& initialCovariance,
                                     double headingMeasurementNoiseStd) {
         if (!Srukf::alphaIsValid(alpha)) {
-            FSW_THROW_INVALID_ARGUMENT("flybyFilter: alpha must be in (0, 1)");
+            FSW_THROW_INVALID_ARGUMENT("flybyFilter: alpha must be in (0, 1]");
         }
         if (!Srukf::betaIsValid(beta)) {
             FSW_THROW_INVALID_ARGUMENT("flybyFilter: beta must be in [0, 2]");

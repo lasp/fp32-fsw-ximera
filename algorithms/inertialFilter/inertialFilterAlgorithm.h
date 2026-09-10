@@ -54,7 +54,7 @@ class InertialFilterConfig final {
                                        double stMeasurementNoiseStd,
                                        double gyroMeasurementNoiseStd) {
         if (!Srukf::alphaIsValid(alpha)) {
-            FSW_THROW_INVALID_ARGUMENT("inertialFilter: alpha must be in (0, 1)");
+            FSW_THROW_INVALID_ARGUMENT("inertialFilter: alpha must be in (0, 1]");
         }
         if (!Srukf::betaIsValid(beta)) {
             FSW_THROW_INVALID_ARGUMENT("inertialFilter: beta must be in [0, 2]");

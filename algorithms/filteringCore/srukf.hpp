@@ -131,8 +131,8 @@ class SRuKF {
 
     // ---- Validity checks ----------------------------------------------------
 
-    /*! @return true iff alpha is in (0, 1) */
-    static bool alphaIsValid(double alpha) { return alpha > 0.0 && alpha < 1.0; }
+    /*! @return true iff alpha is in (0, 1] */
+    static bool alphaIsValid(double alpha) { return alpha > 0.0 && alpha <= 1.0; }
 
     /*! @return true iff beta is in [0, 2] */
     static bool betaIsValid(double beta) { return beta >= 0.0 && beta <= 2.0; }

@@ -101,12 +101,17 @@ TEST(FlybyFilterConfig, RejectsNonFiniteInitialState) {
     EXPECT_THROW(buildConfig(in), fsw::invalid_argument);
 }
 
-TEST(FlybyFilterConfig, RejectsAlphaOutsideOpenUnitInterval) {
-    for (double bad : {0.0, 1.0, -0.1, 1.5}) {  // (0, 1) open interval
+TEST(FlybyFilterConfig, RejectsAlphaOutsideHalfOpenUnitInterval) {
+    for (double bad : {0.0, -0.1, 1.5}) {  // (0, 1]: zero and anything above one are rejected
         ConfigInputs in;
         in.alpha = bad;
         EXPECT_THROW(buildConfig(in), fsw::invalid_argument) << "alpha=" << bad;
     }
+
+    // alpha = 1 is the inclusive upper bound: the sigma points sit one standard deviation out.
+    ConfigInputs unitAlpha;
+    unitAlpha.alpha = 1.0;
+    EXPECT_NO_THROW(buildConfig(unitAlpha));
 }
 
 TEST(FlybyFilterConfig, RejectsBetaOutsideRange) {

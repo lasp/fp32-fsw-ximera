@@ -146,14 +146,14 @@ void fuzzTimeAndMeasurementUpdates(double alpha,
     EXPECT_LE(rateTrace(afterRate), rateTracePrior + kTol) << "rate covariance should shrink";
 }
 FUZZ_TEST(InertialFilterFuzz, fuzzTimeAndMeasurementUpdates)
-    .WithDomains(fuzztest::InRange(1e-2, 1.0 - 1e-9),  // alpha in (0, 1)
-                 fuzztest::InRange(0.0, 2.0),          // beta
-                 fuzztest::InRange(1e-4, 1e-1),        // initial attitude variance
-                 fuzztest::InRange(1e-6, 1e-2),        // initial rate variance
-                 fuzztest::InRange(0.0, 1e-4),         // process noise
-                 fuzztest::InRange(1e-5, 1e-1),        // ST measurement noise std
-                 fuzztest::InRange(1e-5, 1e-1),        // gyro measurement noise std
-                 fuzztest::InRange(-0.3, 0.3),         // initial sigma x/y/z
+    .WithDomains(fuzztest::InRange(1e-2, 1.0),   // alpha in (0, 1]
+                 fuzztest::InRange(0.0, 2.0),    // beta
+                 fuzztest::InRange(1e-4, 1e-1),  // initial attitude variance
+                 fuzztest::InRange(1e-6, 1e-2),  // initial rate variance
+                 fuzztest::InRange(0.0, 1e-4),   // process noise
+                 fuzztest::InRange(1e-5, 1e-1),  // ST measurement noise std
+                 fuzztest::InRange(1e-5, 1e-1),  // gyro measurement noise std
+                 fuzztest::InRange(-0.3, 0.3),   // initial sigma x/y/z
                  fuzztest::InRange(-0.3, 0.3),
                  fuzztest::InRange(-0.3, 0.3),
                  fuzztest::InRange(-0.1, 0.1),  // initial omega x/y/z
@@ -204,12 +204,12 @@ void fuzzTimeUpdatePropagatesStateAndGrowsCovariance(double alpha,
     EXPECT_GE(P.trace(), traceWithoutProcessNoise - kTol) << "process noise should not shrink the covariance";
 }
 FUZZ_TEST(InertialFilterFuzz, fuzzTimeUpdatePropagatesStateAndGrowsCovariance)
-    .WithDomains(fuzztest::InRange(1e-2, 1.0 - 1e-9),  // alpha in (0, 1)
-                 fuzztest::InRange(0.0, 2.0),          // beta
-                 fuzztest::InRange(1e-4, 1e-1),        // initial attitude variance
-                 fuzztest::InRange(1e-6, 1e-2),        // initial rate variance
-                 fuzztest::InRange(0.0, 1e-4),         // process noise
-                 fuzztest::InRange(-0.3, 0.3),         // initial sigma x/y/z
+    .WithDomains(fuzztest::InRange(1e-2, 1.0),   // alpha in (0, 1]
+                 fuzztest::InRange(0.0, 2.0),    // beta
+                 fuzztest::InRange(1e-4, 1e-1),  // initial attitude variance
+                 fuzztest::InRange(1e-6, 1e-2),  // initial rate variance
+                 fuzztest::InRange(0.0, 1e-4),   // process noise
+                 fuzztest::InRange(-0.3, 0.3),   // initial sigma x/y/z
                  fuzztest::InRange(-0.3, 0.3),
                  fuzztest::InRange(-0.3, 0.3),
                  fuzztest::InRange(-0.1, 0.1),  // initial omega x/y/z

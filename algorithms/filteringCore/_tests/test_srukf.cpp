@@ -135,10 +135,10 @@ TEST(SrukfApi, SetGetRoundtripsForAlphaAndBeta) {
 // Valid inputs. The validators are static: they take the term to check and can be called
 // without an SRuKF instance (e.g. from a filter's config validation in another file).
 TEST(SrukfApi, ValidityChecks) {
-    // (1) alphaIsValid: true iff alpha in (0, 1) (endpoints excluded).
+    // (1) alphaIsValid: true iff alpha in (0, 1] -- zero excluded, one included.
     EXPECT_TRUE(SRuKFType::alphaIsValid(0.5)) << "alpha=0.5 in range";
+    EXPECT_TRUE(SRuKFType::alphaIsValid(1.0)) << "alpha=1 is the inclusive upper bound";
     EXPECT_FALSE(SRuKFType::alphaIsValid(0.0)) << "alpha=0 excluded";
-    EXPECT_FALSE(SRuKFType::alphaIsValid(1.0)) << "alpha=1 excluded";
     EXPECT_FALSE(SRuKFType::alphaIsValid(-0.1)) << "alpha<0";
     EXPECT_FALSE(SRuKFType::alphaIsValid(1.5)) << "alpha>1";
 

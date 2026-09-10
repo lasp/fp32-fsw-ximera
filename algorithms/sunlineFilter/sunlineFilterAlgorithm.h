@@ -63,7 +63,7 @@ class SunlineFilterConfig final {
                                       double cssMeasurementNoiseStd,
                                       double gyroMeasurementNoiseStd) {
         if (!Srukf::alphaIsValid(alpha)) {
-            FSW_THROW_INVALID_ARGUMENT("sunlineFilter: alpha must be in (0, 1)");
+            FSW_THROW_INVALID_ARGUMENT("sunlineFilter: alpha must be in (0, 1]");
         }
         if (!Srukf::betaIsValid(beta)) {
             FSW_THROW_INVALID_ARGUMENT("sunlineFilter: beta must be in [0, 2]");

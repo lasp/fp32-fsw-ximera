@@ -153,7 +153,7 @@ Configuration parameters
       - Valid range
     * - alpha
       - sigma-point spread tunable
-      - 0 < alpha < 1
+      - 0 < alpha <= 1
     * - beta
       - prior-knowledge tunable
       - 0 <= beta <= 2
