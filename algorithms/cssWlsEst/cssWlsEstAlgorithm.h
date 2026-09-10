@@ -170,16 +170,16 @@ class CssWlsEstAlgorithm final {
     /*! Solve the least squares fit for the sun heading.
         @return success indicator (0 for good, 1 for a singular normal matrix)
         @param numActiveCss The count on input measurements
-        @param H            The predicted pointing vector for each measurement, one per row
         @param weights      The diagonal of the measurement weighting matrix; only applied when more
                             than two measurements are available, as the one- and two-measurement
                             fits are exactly determined
+        @param H            The predicted pointing vector for each measurement, one per row
         @param y            The observation vector for the valid sensors
         @param x            The output least squares fit for the observations
      */
     static int computeWlsmn(uint32_t numActiveCss,
-                            const Eigen::Matrix<float, kMaxNumCss, 3>& H,
                             const Eigen::Vector<float, kMaxNumCss>& weights,
+                            const Eigen::Matrix<float, kMaxNumCss, 3>& H,
                             const Eigen::Vector<float, kMaxNumCss>& y,
                             Eigen::Vector3f& x);
 
