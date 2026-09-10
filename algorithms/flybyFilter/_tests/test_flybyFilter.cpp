@@ -182,6 +182,112 @@ TEST(FlybyFilterAlgorithmLifecycle, SetConfigReDerivesMu) {
     EXPECT_TRUE(algo.getState().raw().isApprox(reference.getState().raw(), 1E-9));
 }
 
+TEST(FlybyFilterAlgorithmLifecycle, SetConfigReDerivesProcessNoise) {
+    TestState const initial = nominalTruth();
+    Matrix6 const P0 = diagCovariance(100.0, 0.1);
+    Matrix6 const smallQ = Matrix6::Identity() * 1E-12;
+    Matrix6 const largeQ = Matrix6::Identity() * 1E-4;
+    constexpr double dt = 10.0;
+
+    FlybyFilterAlgorithm reference(configWithProcessNoise(initial, P0, largeQ));
+    EXPECT_TRUE(reference.timeUpdate(dt));
+
+    FlybyFilterAlgorithm smallOnly(configWithProcessNoise(initial, P0, smallQ));
+    EXPECT_TRUE(smallOnly.timeUpdate(dt));
+    ASSERT_FALSE(smallOnly.getCovariance().isApprox(reference.getCovariance()));
+
+    FlybyFilterAlgorithm algo(configWithProcessNoise(initial, P0, smallQ));
+    algo.setConfig(configWithProcessNoise(initial, P0, largeQ));
+    EXPECT_TRUE(algo.timeUpdate(dt));
+    EXPECT_TRUE(algo.getCovariance().isApprox(reference.getCovariance()));
+}
+
+TEST(FlybyFilterAlgorithmLifecycle, SetConfigPreservesTheCurrentEstimate) {
+    TestState const initial = nominalTruth();
+    Matrix6 const P0 = diagCovariance(100.0, 0.1);
+    FlybyFilterAlgorithm algo(baseConfig(initial, P0));
+
+    // Move the estimate off its seed before swapping the configuration.
+    ASSERT_TRUE(algo.timeUpdate(50.0));
+    TestState const moved = algo.getState();
+    Matrix6 const movedCovariance = algo.getCovariance();
+    ASSERT_FALSE(moved.raw().isApprox(initial.raw()));
+
+    // A config carrying a different seed must re-derive the filter parameters without disturbing
+    // the running estimate -- only reInitialize() re-seeds.
+    TestState const otherSeed = makeState({4000.0, -500.0, 250.0}, {0.5, -1.0, 0.25});
+    algo.setConfig(baseConfig(otherSeed, diagCovariance(10.0, 0.01)));
+
+    EXPECT_TRUE(algo.getState().raw().isApprox(moved.raw(), 1E-12)) << "setConfig must not re-seed the state";
+    EXPECT_TRUE(algo.getCovariance().isApprox(movedCovariance, 1E-12)) << "setConfig must not re-seed the covariance";
+
+    // ...and the new seed is what reInitialize() restores.
+    algo.reInitialize();
+    EXPECT_TRUE(algo.getState().raw().isApprox(otherSeed.raw(), 1E-9));
+}
+
+TEST(FlybyFilterAlgorithmLifecycle, ClearRevertsToTheLastMeasurementAnchor) {
+    TestState const initial = nominalTruth();
+    Matrix6 const P0 = diagCovariance(100.0, 0.1);
+    FlybyFilterAlgorithm algo(baseConfig(initial, P0));
+
+    // A measurement stamped at the call time leaves the filter sitting exactly on its anchor.
+    HeadingData heading;
+    heading.timeTag = 10.0;
+    heading.rhat_BN_N = headingOf(initial);
+    algo.update(10.0, heading);
+    ASSERT_TRUE(algo.getLastHeadingResiduals().valid);
+
+    TestState const anchor = algo.getState();
+    Matrix6 const anchorCovariance = algo.getCovariance();
+
+    ASSERT_TRUE(algo.timeUpdate(500.0));
+    ASSERT_FALSE(algo.getState().raw().isApprox(anchor.raw())) << "propagation should move off the anchor";
+
+    algo.clear();
+    EXPECT_TRUE(algo.getState().raw().isApprox(anchor.raw(), 1E-12)) << "clear() must restore the last-good state";
+    EXPECT_TRUE(algo.getCovariance().isApprox(anchorCovariance, 1E-12))
+        << "clear() must restore the last-good covariance";
+    EXPECT_FALSE(algo.getLastHeadingResiduals().valid) << "clear() must invalidate the residual snapshot";
+}
+
+// ============================================================================
+// Output accessors: getFilterOutput() and the snapshot returned by update().
+// ============================================================================
+
+TEST(FlybyFilterAlgorithmOutput, GetFilterOutputMatchesTheStateAccessors) {
+    TestState const initial = nominalTruth();
+    FlybyFilterAlgorithm algo(baseConfig(initial, diagCovariance(100.0, 0.1)));
+
+    FilterStateOutput const seeded = algo.getFilterOutput();
+    EXPECT_TRUE(seeded.state.isApprox(algo.getState().raw(), 1E-12));
+    EXPECT_TRUE(seeded.covariance.isApprox(algo.getCovariance(), 1E-12));
+
+    ASSERT_TRUE(algo.timeUpdate(30.0));
+    FilterStateOutput const propagated = algo.getFilterOutput();
+    EXPECT_TRUE(propagated.state.isApprox(algo.getState().raw(), 1E-12));
+    EXPECT_TRUE(propagated.covariance.isApprox(algo.getCovariance(), 1E-12));
+}
+
+TEST(FlybyFilterAlgorithmOutput, UpdateSnapshotMatchesTheAccessors) {
+    TestState const initial = nominalTruth();
+    FlybyFilterAlgorithm algo(baseConfig(initial, diagCovariance(100.0, 0.1)));
+
+    HeadingData heading;
+    heading.timeTag = 10.0;
+    heading.rhat_BN_N = headingOf(initial);
+    FlybyFilterOutput const out = algo.update(20.0, heading);
+
+    EXPECT_TRUE(out.filterState.state.isApprox(algo.getState().raw(), 1E-12));
+    EXPECT_TRUE(out.filterState.covariance.isApprox(algo.getCovariance(), 1E-12));
+
+    HeadingResidualsOutput const& latest = algo.getLastHeadingResiduals();
+    EXPECT_EQ(out.headingResiduals.valid, latest.valid);
+    EXPECT_TRUE(out.headingResiduals.observation.isApprox(latest.observation, 1E-12));
+    EXPECT_TRUE(out.headingResiduals.preFit.isApprox(latest.preFit, 1E-12));
+    EXPECT_TRUE(out.headingResiduals.postFit.isApprox(latest.postFit, 1E-12));
+}
+
 // ============================================================================
 // Dynamics: two-body point-mass gravity.
 // ============================================================================
