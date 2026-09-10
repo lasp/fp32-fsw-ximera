@@ -14,6 +14,7 @@
 //   * Measurements through update(): residual freshness and contents, measurement-noise sensitivity,
 //     monotone covariance growth without measurements.
 //   * Degenerate geometry: both the dynamics and the heading model divide by |r|.
+//   * SRuKF static helpers: forward/back substitution, Cholesky, QR-just-R, Cholesky up/down-date.
 //   * Convergence: angles-only heading measurements along a propagated two-body arc.
 //
 // All quantities are in the filter's internal units (km, km/s); the adapter handles SI<->internal.
@@ -665,6 +666,84 @@ TEST(FlybyFilterAlgorithmDegenerate, ZeroPositionSeedMakesTimeUpdateReportFailur
     FlybyFilterAlgorithm algo(baseConfig(atOrigin, diagCovariance(1.0, 1E-3)));
 
     EXPECT_FALSE(algo.timeUpdate(10.0)) << "propagation from r = 0 must be reported as invalid";
+}
+
+// ============================================================================
+// SRuKF static helpers: numerical helpers (filter-agnostic).
+// ============================================================================
+
+TEST(SrukfDetail, ForwardSubstitutionSolvesLowerTriangular) {
+    Eigen::Matrix3d L;
+    L << 2.0, 0.0, 0.0, 1.0, 3.0, 0.0, 0.5, 1.0, 4.0;
+    Eigen::Vector3d const xTruth(1.0, 2.0, 3.0);
+    Eigen::Matrix<double, 3, 1> const b = L * xTruth;
+
+    Eigen::Matrix<double, 3, 1> const x = SRuKF::forwardSubstitution<3, 1>(L, b);
+    EXPECT_TRUE(x.col(0).isApprox(xTruth, 1E-12));
+}
+
+TEST(SrukfDetail, BackSubstitutionSolvesUpperTriangular) {
+    Eigen::Matrix3d U;
+    U << 2.0, 1.0, 0.5, 0.0, 3.0, 1.0, 0.0, 0.0, 4.0;
+    Eigen::Vector3d const xTruth(1.0, 2.0, 3.0);
+    Eigen::Matrix<double, 3, 1> const b = U * xTruth;
+
+    Eigen::Matrix<double, 3, 1> const x = SRuKF::backSubstitution<3, 1>(U, b);
+    EXPECT_TRUE(x.col(0).isApprox(xTruth, 1E-12));
+}
+
+TEST(SrukfDetail, CholeskyDecompositionReconstructsP) {
+    Eigen::Matrix3d P;
+    P << 4.0, 2.0, 0.5, 2.0, 5.0, 1.0, 0.5, 1.0, 6.0;
+    Eigen::Matrix3d const L = SRuKF::choleskyDecomposition<3>(P);
+    EXPECT_TRUE((L * L.transpose()).isApprox(P, 1E-10));
+
+    // Returned factor should be lower-triangular.
+    for (int i = 0; i < L.rows(); ++i) {
+        for (int j = i + 1; j < L.cols(); ++j) {
+            EXPECT_NEAR(L(i, j), 0.0, 1E-12) << "(" << i << "," << j << ")";
+        }
+    }
+}
+
+// SRUKF feeds qrDecompositionJustR a wider-than-tall A and expects back a
+// square N×N factor such that R * R^T == A * A^T. The function transposes its
+// internal R, so the returned matrix is lower-triangular.
+TEST(SrukfDetail, QrDecompositionJustRPreservesNormalEquations) {
+    Eigen::Matrix<double, 3, 9> A;
+    A << 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 2.0, -1.0, 0.0, 1.0,
+        2.0, 3.0, 4.0, 5.0, 6.0;
+
+    Eigen::Matrix3d const R = SRuKF::qrDecompositionJustR<3, 9>(A);
+
+    for (int i = 0; i < R.rows(); ++i) {
+        for (int j = i + 1; j < R.cols(); ++j) {
+            EXPECT_NEAR(R(i, j), 0.0, 1E-10) << "(" << i << "," << j << ")";
+        }
+    }
+    EXPECT_TRUE((R * R.transpose()).isApprox(A * A.transpose(), 1E-9));
+}
+
+TEST(SrukfDetail, CholeskyUpDownDateMatchesExplicitUpdate) {
+    Eigen::Matrix3d P0;
+    P0 << 4.0, 1.0, 0.0, 1.0, 3.0, 0.5, 0.0, 0.5, 2.0;
+    Eigen::Matrix3d const S0 = SRuKF::choleskyDecomposition<3>(P0);
+
+    Eigen::Vector3d const v(0.1, -0.2, 0.3);
+
+    // Up-date with +coef and down-date with -coef must reconstruct P0 ± coef v vᵀ.
+    {
+        double const coef = 0.5;
+        Eigen::Matrix3d const S1 = SRuKF::choleskyUpDownDate<3>(S0, v, coef);
+        Eigen::Matrix3d const P1 = P0 + coef * v * v.transpose();
+        EXPECT_TRUE((S1 * S1.transpose()).isApprox(P1, 1E-9));
+    }
+    {
+        double const coef = -0.5;
+        Eigen::Matrix3d const S1 = SRuKF::choleskyUpDownDate<3>(S0, v, coef);
+        Eigen::Matrix3d const P1 = P0 - 0.5 * v * v.transpose();
+        EXPECT_TRUE((S1 * S1.transpose()).isApprox(P1, 1E-9));
+    }
 }
 
 // ============================================================================
