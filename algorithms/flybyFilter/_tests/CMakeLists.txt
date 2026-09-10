@@ -3,7 +3,7 @@
 # source directly and links only filteringCore.
 
 add_executable(test_flybyFilterAlgorithm
-  test_flybyFilterAlgorithm.cpp
+  test_flybyFilter.cpp
   ../flybyFilterAlgorithm.cpp
 )
 target_include_directories(test_flybyFilterAlgorithm PRIVATE ..)
