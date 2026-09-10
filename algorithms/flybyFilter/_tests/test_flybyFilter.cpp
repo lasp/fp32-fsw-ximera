@@ -11,6 +11,9 @@
 //   * timeUpdate(): zero-dt no-op; propagation matches filtering::propagate; covariance growth under Q.
 //   * measurementUpdate(): heading update shrinks covariance (symmetric + PSD); high-noise limit;
 //     bad-measurement rejection (handled inside the SRuKF).
+//   * Measurements through update(): residual freshness and contents, measurement-noise sensitivity,
+//     monotone covariance growth without measurements.
+//   * Degenerate geometry: both the dynamics and the heading model divide by |r|.
 //   * Convergence: angles-only heading measurements along a propagated two-body arc.
 //
 // All quantities are in the filter's internal units (km, km/s); the adapter handles SI<->internal.
@@ -565,6 +568,103 @@ TEST(FlybyFilterAlgorithmMeasurementUpdate, BadMeasurementReturnsFalseAndLeavesR
     EXPECT_FALSE(algo.measurementUpdate(m)) << "a non-finite measurement update must report false";
     EXPECT_FALSE(algo.getLastHeadingResiduals().valid) << "no residual is recorded for a bad update";
     EXPECT_TRUE(algo.getState().raw().allFinite()) << "state must stay finite after a rejected update";
+}
+
+TEST(FlybyFilterAlgorithmMeasurements, HeadingDataFiresResidualOnlyWhenFresh) {
+    TestState const initial = nominalTruth();
+    FlybyFilterAlgorithm algo(baseConfig(initial, diagCovariance(100.0, 0.1)));
+
+    // A stale time tag is the "no reading this cycle" sentinel: no residual is reported.
+    algo.update(10.0, HeadingData{});
+    EXPECT_FALSE(algo.getLastHeadingResiduals().valid);
+
+    HeadingData fresh;
+    fresh.timeTag = 20.0;
+    fresh.rhat_BN_N = headingOf(initial);
+    algo.update(20.0, fresh);
+
+    HeadingResidualsOutput const& res = algo.getLastHeadingResiduals();
+    EXPECT_TRUE(res.valid);
+    EXPECT_TRUE(res.observation.isApprox(fresh.rhat_BN_N, 1E-12)) << "the residual records the supplied heading";
+}
+
+TEST(FlybyFilterAlgorithmMeasurements, InformativeMeasurementReducesResidual) {
+    // Seed with a heading error so the measurement has something to correct.
+    TestState const truth = nominalTruth();
+    TestState const initial = makeState(truth.get<filtering::Position<3>>() + Eigen::Vector3d(200.0, -150.0, 90.0),
+                                        truth.get<filtering::Velocity<3>>());
+    FlybyFilterAlgorithm algo(baseConfig(initial, diagCovariance(300.0, 0.1)));
+
+    HeadingData heading;
+    heading.timeTag = 10.0;
+    heading.rhat_BN_N = headingOf(truth);
+    algo.update(10.0, heading);
+
+    HeadingResidualsOutput const& res = algo.getLastHeadingResiduals();
+    ASSERT_TRUE(res.valid);
+    EXPECT_LT(res.postFit.norm(), res.preFit.norm()) << "an informative update must shrink the residual";
+}
+
+TEST(FlybyFilterAlgorithmMeasurements, LargerMeasurementNoiseStdShrinksCovarianceLess) {
+    TestState const initial = nominalTruth();
+    Matrix6 const P0 = diagCovariance(100.0, 0.1);
+
+    // The noise covariance is built inside packHeadingMeasurement() from the configured std, so a
+    // larger configured std must yield a smaller correction for the same reading.
+    auto traceAfterUpdate = [&](double headingStd) {
+        FlybyFilterAlgorithm algo(configWithHeadingStd(initial, P0, headingStd));
+        HeadingData heading;
+        heading.timeTag = 10.0;
+        heading.rhat_BN_N = headingOf(initial);
+        algo.update(10.0, heading);
+        return algo.getCovariance().trace();
+    };
+
+    double const tight = traceAfterUpdate(1E-5);
+    double const loose = traceAfterUpdate(1E-1);
+    EXPECT_LT(tight, loose) << "a tighter measurement std should shrink the covariance more";
+    EXPECT_LT(loose, P0.trace()) << "even a loose measurement should not grow the covariance";
+}
+
+TEST(FlybyFilterAlgorithmMeasurements, WithoutMeasurementsGrowsCovarianceMonotonically) {
+    TestState const initial = nominalTruth();
+    Matrix6 const P0 = diagCovariance(100.0, 0.1);
+    FlybyFilterAlgorithm algo(configWithProcessNoise(initial, P0, Matrix6::Identity() * 1E-6));
+
+    // Three measurement-free cycles: total uncertainty must be non-decreasing at each step.
+    algo.update(10.0, HeadingData{});
+    double const trace1 = algo.getCovariance().trace();
+    algo.update(40.0, HeadingData{});
+    double const trace2 = algo.getCovariance().trace();
+    algo.update(90.0, HeadingData{});
+    double const trace3 = algo.getCovariance().trace();
+
+    EXPECT_GT(trace2, trace1);
+    EXPECT_GT(trace3, trace2);
+    EXPECT_TRUE(finiteSymmetricPsd(algo.getCovariance()));
+}
+
+// ============================================================================
+// Degenerate geometry: both the dynamics and the heading model divide by |r|.
+// ============================================================================
+
+TEST(FlybyFilterAlgorithmDegenerate, ZeroPositionMakesTheDynamicsNonFinite) {
+    // Documents the model's precondition: two-body gravity is singular at the central body, so a
+    // sigma point that reaches r = 0 produces a non-finite derivative.
+    TestState const atOrigin = makeState(Eigen::Vector3d::Zero(), Eigen::Vector3d(1.0, -2.0, 0.5));
+    TestState const dot = FlybyDynamics{kMu}(0.0, atOrigin);
+
+    EXPECT_TRUE(dot.get<filtering::Position<3>>().allFinite()) << "r_dot = v stays finite";
+    EXPECT_FALSE(dot.get<filtering::Velocity<3>>().allFinite()) << "v_dot = -mu/|r|^3 r is singular at r = 0";
+}
+
+TEST(FlybyFilterAlgorithmDegenerate, ZeroPositionSeedMakesTimeUpdateReportFailure) {
+    // A filter seeded at the central body cannot propagate; timeUpdate must report the failure
+    // rather than silently publishing a non-finite estimate.
+    TestState const atOrigin = makeState(Eigen::Vector3d::Zero(), Eigen::Vector3d(1.0, -2.0, 0.5));
+    FlybyFilterAlgorithm algo(baseConfig(atOrigin, diagCovariance(1.0, 1E-3)));
+
+    EXPECT_FALSE(algo.timeUpdate(10.0)) << "propagation from r = 0 must be reported as invalid";
 }
 
 // ============================================================================
