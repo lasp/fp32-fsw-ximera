@@ -11,6 +11,7 @@ target_include_directories(test_thrFiringRemainder PRIVATE
 target_link_libraries(test_thrFiringRemainder
     Eigen3::Eigen
     GTest::gtest_main
+    Xmera::MissionParameters
   )
 
 gtest_discover_tests(test_thrFiringRemainder)
@@ -32,6 +33,7 @@ if(XMERA_ENABLE_FUZZTESTS)
     Eigen3::Eigen
     fuzztest::fuzztest
     fuzztest::fuzztest_gtest_main
+    Xmera::MissionParameters
   )
 
   gtest_discover_tests(test_thrFiringRemainder_fuzz

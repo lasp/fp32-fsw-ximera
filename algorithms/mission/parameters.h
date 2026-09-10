@@ -2,9 +2,10 @@
 #define MISSION_PARAMETERS_H
 
 // Mission sizing constants. This is the single source of the array bounds shared by the
-// algorithms, their C boundary types and the message payloads, in both the standalone
-// freestanding build and an Xmera build. Nothing merges values into it, so it states every
-// constant Xmera knows about, including the ones no fp32 algorithm uses.
+// algorithms, their C boundary types and the message payloads -- both in the standalone
+// freestanding build and, via xmera_provide_mission_parameters() in algorithms/CMakeLists.txt, in
+// an Xmera build. Nothing merges values into it, so it states every constant Xmera knows about,
+// including the ones no fp32 algorithm uses.
 
 // SWIG parses this header to expose the constants to Python, and its preprocessor reads the quote
 // in a digit separator such as 5'000 as the start of a character literal, silently dropping the

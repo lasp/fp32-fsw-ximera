@@ -3,9 +3,10 @@
 
 #include <mission/parameters.h>
 
-// The constants fp32 requires the mission to state. Naming them here turns an incomplete mission
-// header into one clear message, rather than a cascade of undeclared-identifier errors from
-// whichever payload or algorithm the compiler happens to reach first.
+// The mission sizing fp32 requires. Xmera puts exactly one mission/parameters.h in force per build
+// and merges nothing into it, so a mission that omits a constant its own modules do not use -- a
+// spacecraft with no reaction wheels dropping RW_EFF_CNT, say -- silently breaks the payloads below.
+// Naming the requirement here turns that into one clear message.
 #if !defined(MAX_NUM_CSS_SENSORS) || !defined(MAX_EFF_CNT) || !defined(RW_EFF_CNT)
 #error "mission/parameters.h must define MAX_NUM_CSS_SENSORS, MAX_EFF_CNT and RW_EFF_CNT."
 #endif

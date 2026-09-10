@@ -10,6 +10,7 @@ target_include_directories(test_forceTorqueThrForceMapping PRIVATE "${CMAKE_SOUR
 target_link_libraries(test_forceTorqueThrForceMapping PRIVATE
   Eigen3::Eigen
   GTest::gtest_main
+    Xmera::MissionParameters
 )
 
 gtest_discover_tests(test_forceTorqueThrForceMapping)
@@ -30,6 +31,7 @@ if(XMERA_ENABLE_FUZZTESTS)
     Eigen3::Eigen
     fuzztest::fuzztest
     fuzztest::fuzztest_gtest_main
+    Xmera::MissionParameters
   )
 
   gtest_discover_tests(test_forceTorqueThrForceMapping_fuzz
