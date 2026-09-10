@@ -121,6 +121,7 @@ def test_propagation(show_plots):
 
     filter_plots.energy(times_s, energy_filter, 'Prop', show_plots)
     filter_plots.state_covar(state_log, covar_log, 'Prop', show_plots)
+    filter_plots.covar_trace(covar_log, num_states, 'Prop', show_plots)
 
     assert np.all(np.isfinite(state_log[:, 1:])), "filter state must stay finite"
     np.testing.assert_allclose(energy_filter, energy_truth, rtol=1E-2, atol=1E-6,
@@ -188,7 +189,11 @@ def test_measurements(show_plots):
     assert valid.any(), "at least one heading measurement must fire"
 
     res_time = add_time_column(res_log.times(), post)
+    error_log = np.copy(state_log)
+    error_log[:, 1:] -= truth[:len(error_log), 1:]
+    filter_plots.states(error_log, 'Update error', show_plots)
     filter_plots.state_covar(state_log, covar_log, 'Update', show_plots)
+    filter_plots.covar_trace(covar_log, num_states, 'Update', show_plots)
     filter_plots.post_fit_residuals(res_time, HEADING_STD, 'Update', show_plots)
     filter_plots.two_orbits(truth[:, 0:4], state_log[:, 0:4], show_plots)
 
@@ -363,9 +368,9 @@ def test_unit_conversion_does_not_change_the_si_result(show_plots):
 
 
 if __name__ == "__main__":
-    test_propagation(False)
-    test_measurements(False)
-    test_nav_trans_output_matches_the_filter_state(False)
-    test_heading_is_gated_on_validity_and_freshness(False)
-    test_delayed_measurement_anchors_to_its_time_tag(False)
-    test_unit_conversion_does_not_change_the_si_result(False)
+    test_propagation(True)
+    test_measurements(True)
+    test_nav_trans_output_matches_the_filter_state(True)
+    test_heading_is_gated_on_validity_and_freshness(True)
+    test_delayed_measurement_anchors_to_its_time_tag(True)
+    test_unit_conversion_does_not_change_the_si_result(True)
