@@ -28,17 +28,17 @@ The following table lists all the module input and output messages.
       - Msg Type
       - Description
     * - opNavHeadingMsg
-      - :ref:`OpNavUnitVecMsgPayload`
+      - :ref:`OpNavUnitVecMsgF32Payload`
       - Input optical-navigation heading: unit vector ``rhat_BN_N`` from the spacecraft to the central
         body, inertial frame; required
     * - navTransOutMsg
-      - :ref:`NavTransMsgPayload`
+      - :ref:`NavTransMsgF32Payload`
       - Output message containing the estimated inertial position and velocity
     * - filterOutMsg
-      - :ref:`FilterMsgPayload`
+      - :ref:`FilterMsgF32Payload`
       - Output message with the filter estimated state and covariance
     * - filterResOutMsg
-      - :ref:`FilterResidualsMsgPayload`
+      - :ref:`FilterResidualsMsgF32Payload`
       - Output message containing pre- and post-fit residuals for the heading measurements
 
 

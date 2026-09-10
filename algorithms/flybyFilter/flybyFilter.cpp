@@ -96,7 +96,7 @@ void FlybyFilter::updateState(uint64_t currentSimNanos) {
     HeadingData headingData{};
     if (auto const payload = this->opNavHeadingMsg(); payload.valid && payload.timeTag > this->lastHeadingTimeTag) {
         headingData.timeTag = payload.timeTag;
-        headingData.rhat_BN_N = cArrayToEigenVector(payload.rhat_BN_N);
+        headingData.rhat_BN_N = cArrayToEigenVector(payload.rhat_BN_N).cast<double>();
         this->lastHeadingTimeTag = payload.timeTag;
     }
 
@@ -110,9 +110,9 @@ void FlybyFilter::updateState(uint64_t currentSimNanos) {
  *  @param currentSimNanos [ns] sim time provided to the outgoing messages
  *  @param filterOutput    [-]  filter data returned by the algorithm */
 void FlybyFilter::writeOutputMessages(uint64_t currentSimNanos, FlybyFilterOutput const& filterOutput) {
-    NavTransMsgPayload navTransBuf{};
-    FilterMsgPayload filterBuf{};
-    FilterResidualsMsgPayload resBuf{};
+    NavTransMsgF32Payload navTransBuf{};
+    FilterMsgF32Payload filterBuf{};
+    FilterResidualsMsgF32Payload resBuf{};
 
     double const timeTag = static_cast<double>(currentSimNanos) * kNano2Sec;
     double const invUc = 1.0 / this->unitConversion;

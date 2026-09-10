@@ -99,7 +99,7 @@ def test_propagation(show_plots):
     filter_log = module.filterOutMsg.recorder()
     sim.AddModelToTask("unit_task", filter_log)
 
-    opnav_msg = messaging.OpNavUnitVecMsg()
+    opnav_msg = messaging.OpNavUnitVecMsgF32()
     module.opNavHeadingMsg.subscribeTo(opnav_msg)  # required connection; never written (no measurements)
 
     sim_min = 30
@@ -154,8 +154,8 @@ def test_measurements(show_plots):
     sim.AddModelToTask("unit_task", filter_log)
     sim.AddModelToTask("unit_task", res_log)
 
-    opnav_payload = messaging.OpNavUnitVecMsgPayload()
-    opnav_msg = messaging.OpNavUnitVecMsg()
+    opnav_payload = messaging.OpNavUnitVecMsgF32Payload()
+    opnav_msg = messaging.OpNavUnitVecMsgF32()
     module.opNavHeadingMsg.subscribeTo(opnav_msg)
 
     # Truth: two-body arc with a velocity kick at t1 (makes range/velocity observable from headings).
@@ -231,7 +231,7 @@ def _run_heading_scenario(unit_conversion, headings, n_steps=60, dt=1.0):
     for log in (filter_log, res_log, nav_log):
         sim.AddModelToTask("unit_task", log)
 
-    opnav_msg = messaging.OpNavUnitVecMsg()
+    opnav_msg = messaging.OpNavUnitVecMsgF32()
     module.opNavHeadingMsg.subscribeTo(opnav_msg)
 
     sim.InitializeSimulation()
@@ -246,7 +246,7 @@ def _run_heading_scenario(unit_conversion, headings, n_steps=60, dt=1.0):
 
 
 def _heading_payload(time_tag, rhat, valid=True):
-    payload = messaging.OpNavUnitVecMsgPayload()
+    payload = messaging.OpNavUnitVecMsgF32Payload()
     payload.timeTag = time_tag
     payload.rhat_BN_N = list(rhat)
     payload.valid = valid
