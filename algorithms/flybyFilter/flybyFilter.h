@@ -21,7 +21,7 @@
 class FlybyFilter : public SysModel {
    public:
     FlybyFilter();
-    ~FlybyFilter();
+    ~FlybyFilter() override;
 
     void reset(uint64_t currentSimNanos) override;
     void updateState(uint64_t currentSimNanos) override;
