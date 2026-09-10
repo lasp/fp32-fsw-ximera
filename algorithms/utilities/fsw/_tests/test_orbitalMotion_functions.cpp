@@ -8,8 +8,8 @@ using orbitalMotion::ClassicalElements;
 
 // Test constants
 const double muEarth = 3.986004418e14;  // m^3/s^2
-inline constexpr double kAnomalyTol = 1e-8;
-inline constexpr double kStateRelTol = 1e-6;
+inline constexpr double kAnomalyTol = 1e-10;
+inline constexpr double kStateRelTol = 1e-7;
 
 // =============================================================================
 // Anomaly Conversion Tests
@@ -503,7 +503,7 @@ TEST_F(EdgeCasesTest, VerySmallEccentricity) {
 
     double E = orbitalMotion::meanToEccentricAnomaly(M, e);
     ASSERT_TRUE(std::isfinite(E));
-    EXPECT_NEAR(E, M, kAnomalyTol);
+    EXPECT_NEAR(E, M, 1e-8);
 }
 
 TEST_F(EdgeCasesTest, LargeHyperbolicEccentricity) {
