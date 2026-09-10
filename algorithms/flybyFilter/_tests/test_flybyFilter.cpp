@@ -11,12 +11,10 @@
 //
 // All quantities are in the filter's internal units (km, km/s); the adapter handles SI<->internal.
 
-#include "flybyFilterAlgorithm.h"
-#include "flybyFilterSpecs.h"
-
-#include "utilities/fsw/validPSDCheck.h"
+#include "flybyFilterTestHelpers.hpp"
 
 #include <filteringCore/dynamicsModel.hpp>
+#include <filteringCore/srukf.hpp>
 
 #include <gtest/gtest.h>
 
@@ -30,61 +28,10 @@ namespace filtering::flybyFilter {
 namespace {
 
 using State = FlybyFilterAlgorithm::State;
-using Vector6 = Eigen::Matrix<double, 6, 1>;
-using Matrix6 = Eigen::Matrix<double, 6, 6>;
 
-// Mars gravitational parameter in internal units (km^3/s^2).
-constexpr double kMu = 42828.314;
-constexpr double kAlpha = 0.02;
-constexpr double kBeta = 2.0;
-constexpr double kHeadingStd = 1E-4;
-
-State makeState(Eigen::Vector3d const& r, Eigen::Vector3d const& v) {
-    State s;
-    s.set<filtering::Position<3>>(r);
-    s.set<filtering::Velocity<3>>(v);
-    return s;
-}
-
-Matrix6 diagCovariance(double posStd, double velStd) {
-    Vector6 d;
-    d << posStd * posStd, posStd * posStd, posStd * posStd, velStd * velStd, velStd * velStd, velStd * velStd;
-    return d.asDiagonal();
-}
-
-Matrix6 smallProcessNoise() { return Matrix6::Identity() * 1E-12; }
-
-Eigen::Vector3d headingOf(State const& s) {
-    Eigen::Vector3d const r = s.get<filtering::Position<3>>();
-    return r / r.norm();
-}
-
-// A representative flyby state (km, km/s).
-State nominalTruth() { return makeState({3000.0, 1000.0, 500.0}, {1.0, -2.0, 0.5}); }
-
-FlybyFilterConfig baseConfig(State const& initial, Matrix6 const& P) {
-    return FlybyFilterConfig::create(kAlpha, kBeta, kMu, smallProcessNoise(), initial, P, kHeadingStd);
-}
-
-FlybyFilterConfig configWithProcessNoise(State const& initial, Matrix6 const& P, Matrix6 const& processNoise) {
-    return FlybyFilterConfig::create(kAlpha, kBeta, kMu, processNoise, initial, P, kHeadingStd);
-}
-
-// A complete set of valid Config inputs; individual tests override one field.
-struct ConfigInputs {
-    double alpha = kAlpha;
-    double beta = kBeta;
-    double mu = kMu;
-    Matrix6 processNoise = smallProcessNoise();
-    State initialState = nominalTruth();
-    Matrix6 initialCovariance = diagCovariance(100.0, 0.1);
-    double headingStd = kHeadingStd;
-};
-
-FlybyFilterConfig buildConfig(ConfigInputs const& in) {
-    return FlybyFilterConfig::create(
-        in.alpha, in.beta, in.mu, in.processNoise, in.initialState, in.initialCovariance, in.headingStd);
-}
+// Alias for invoking the numerical helpers (static methods on the SRuKF class template). The
+// State/Dynamics arguments don't affect the helpers' behavior; any valid instantiation works.
+using SRuKF = ::filtering::SRuKF<FlybyState, FlybyDynamics>;
 
 }  // namespace
 
@@ -293,9 +240,9 @@ TEST(FlybyFilterAlgorithmTimeUpdate, GrowsCovarianceWithProcessNoise) {
     Matrix6 const P = algo.getCovariance();
     EXPECT_GE(P.trace(), noiseFree.getCovariance().trace() - 1E-9) << "process noise should not shrink covariance";
     EXPECT_GT(P.trace(), 0.0);
+    EXPECT_GT(P.trace(), tracePrior) << "process noise should grow the covariance over a finite dt";
     EXPECT_TRUE(P.isApprox(P.transpose(), 1E-8)) << "covariance not symmetric";
     EXPECT_TRUE(isPositiveSemiDefinite<6>(P)) << "covariance not PSD";
-    (void)tracePrior;
 }
 
 // ============================================================================

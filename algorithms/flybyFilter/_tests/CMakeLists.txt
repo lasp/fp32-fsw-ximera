@@ -4,6 +4,7 @@
 
 add_executable(test_flybyFilterAlgorithm
   test_flybyFilter.cpp
+  flybyFilterTestHelpers.hpp
   ../flybyFilterAlgorithm.cpp
 )
 target_include_directories(test_flybyFilterAlgorithm PRIVATE ..)
@@ -20,6 +21,7 @@ if(XMERA_ENABLE_FUZZTESTS)
 
   add_executable(test_flybyFilter_fuzz
     test_flybyFilter_fuzz.cpp
+    flybyFilterTestHelpers.hpp
     ../flybyFilterAlgorithm.cpp
   )
   target_include_directories(test_flybyFilter_fuzz PRIVATE ..)

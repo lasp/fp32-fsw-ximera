@@ -4,10 +4,7 @@
 //
 // All quantities are in the filter's internal units (km, km/s).
 
-#include "flybyFilterAlgorithm.h"
-#include "flybyFilterSpecs.h"
-
-#include "utilities/fsw/validPSDCheck.h"
+#include "flybyFilterTestHelpers.hpp"
 
 #include <filteringCore/dynamicsModel.hpp>
 
@@ -22,25 +19,13 @@ namespace filtering::flybyFilter {
 namespace {
 
 using State = FlybyFilterAlgorithm::State;
-using Matrix6 = Eigen::Matrix<double, 6, 6>;
 
 // A base flyby geometry the fuzzed offsets perturb, keeping |r| well away from zero.
 Eigen::Vector3d baseR() { return {3000.0, 1000.0, 500.0}; }
 Eigen::Vector3d baseV() { return {1.0, -2.0, 0.5}; }
 
-State makeState(Eigen::Vector3d const& r, Eigen::Vector3d const& v) {
-    State s;
-    s.set<filtering::Position<3>>(r);
-    s.set<filtering::Velocity<3>>(v);
-    return s;
-}
-
-Matrix6 diagCovariance(double posVar, double velVar) {
-    Eigen::Matrix<double, 6, 1> d;
-    d << posVar, posVar, posVar, velVar, velVar, velVar;
-    return d.asDiagonal();
-}
-
+//! Assemble a config from the fuzzed scalars. posStd/velStd are standard deviations, matching the
+//! shared diagCovariance() helper.
 FlybyFilterConfig makeConfig(double alpha,
                              double beta,
                              double mu,
@@ -49,17 +34,8 @@ FlybyFilterConfig makeConfig(double alpha,
                              double q,
                              double headingStd,
                              State const& initial) {
-    return FlybyFilterConfig::create(alpha,
-                                     beta,
-                                     mu,
-                                     Matrix6::Identity() * q,
-                                     initial,
-                                     diagCovariance(posStd * posStd, velStd * velStd),
-                                     headingStd);
-}
-
-bool finiteSymmetricPsd(Matrix6 const& P) {
-    return P.allFinite() && P.isApprox(P.transpose(), 1E-8) && isPositiveSemiDefinite<6>(P);
+    return FlybyFilterConfig::create(
+        alpha, beta, mu, Matrix6::Identity() * q, initial, diagCovariance(posStd, velStd), headingStd);
 }
 
 }  // namespace
