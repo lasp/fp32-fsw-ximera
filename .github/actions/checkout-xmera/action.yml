@@ -1,0 +1,28 @@
+name: Checkout Xmera
+description: >
+  Check out lasp/xmera at the ref this branch's CI requires. The ref is named here and only here, so
+  a branch that needs a paired, unmerged Xmera change edits one line rather than every workflow.
+
+inputs:
+  path:
+    description: Directory to check Xmera out into.
+    required: false
+    default: xmera
+  persist-credentials:
+    description: Whether the checkout leaves credentials in the local git config.
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7
+      with:
+        repository: lasp/xmera
+        path: ${{ inputs.path }}
+        persist-credentials: ${{ inputs.persist-credentials }}
+        # === Per-CI-run pin =============================================
+        # Set to pin Xmera's ref for THIS branch's CI runs while a paired
+        # Xmera change is unmerged. Empty means Xmera's default branch.
+        # Revert before merging.
+        ref: ''

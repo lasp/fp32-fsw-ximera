@@ -38,10 +38,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Checkout Xmera core
-        uses: actions/checkout@v7
-        with:
-          repository: lasp/xmera
-          path: xmera
+        uses: ./.github/actions/checkout-xmera
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v7
