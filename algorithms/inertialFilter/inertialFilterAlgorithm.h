@@ -54,7 +54,7 @@ class InertialFilterConfig final {
                                        double stMeasurementNoiseStd,
                                        double gyroMeasurementNoiseStd) {
         if (!Srukf::alphaIsValid(alpha)) {
-            FSW_THROW_INVALID_ARGUMENT("inertialFilter: alpha must be in (0, 1)");
+            FSW_THROW_INVALID_ARGUMENT("inertialFilter: alpha must be in (0, 1]");
         }
         if (!Srukf::betaIsValid(beta)) {
             FSW_THROW_INVALID_ARGUMENT("inertialFilter: beta must be in [0, 2]");
@@ -64,6 +64,9 @@ class InertialFilterConfig final {
         }
         if (!isValidInitialCovariance(initialCovariance)) {
             FSW_THROW_INVALID_ARGUMENT("inertialFilter: initial covariance must be positive semi-definite");
+        }
+        if (!isValidInitialState(initialState)) {
+            FSW_THROW_INVALID_ARGUMENT("inertialFilter: initial state must be finite");
         }
         if (!isValidStMeasurementNoiseStd(stMeasurementNoiseStd)) {
             FSW_THROW_INVALID_ARGUMENT("inertialFilter: ST measurement noise std must not be negative");
@@ -78,8 +81,9 @@ class InertialFilterConfig final {
     static bool isValidProcessNoise(StateMatrix const& processNoise) {
         return isPositiveSemiDefinite<InertialState::size>(processNoise);
     }
+    static bool isValidInitialState(InertialState const& initialState) { return initialState.allFinite(); }
     static bool isValidInitialCovariance(StateMatrix const& covariance) {
-        return isPositiveSemiDefinite<InertialState::size>(covariance);
+        return covariance.allFinite() && isPositiveSemiDefinite<InertialState::size>(covariance);
     }
     static bool isValidStMeasurementNoiseStd(double noiseStd) { return noiseStd >= 0.0; }
     static bool isValidGyroMeasurementNoiseStd(double noiseStd) { return noiseStd >= 0.0; }

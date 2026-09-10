@@ -94,12 +94,24 @@ FlybyFilterConfig buildConfig(ConfigInputs const& in) {
 
 TEST(FlybyFilterConfig, ValidInputsDoNotThrow) { EXPECT_NO_THROW(buildConfig({})); }
 
-TEST(FlybyFilterConfig, RejectsAlphaOutsideOpenUnitInterval) {
-    for (double bad : {0.0, 1.0, -0.1, 1.5}) {  // (0, 1) open interval
+TEST(FlybyFilterConfig, RejectsNonFiniteInitialState) {
+    ConfigInputs in;
+    in.initialState =
+        makeState(Eigen::Vector3d(std::numeric_limits<double>::quiet_NaN(), 0.0, 0.0), Eigen::Vector3d::Zero());
+    EXPECT_THROW(buildConfig(in), fsw::invalid_argument);
+}
+
+TEST(FlybyFilterConfig, RejectsAlphaOutsideHalfOpenUnitInterval) {
+    for (double bad : {0.0, -0.1, 1.5}) {  // (0, 1]: zero and anything above one are rejected
         ConfigInputs in;
         in.alpha = bad;
         EXPECT_THROW(buildConfig(in), fsw::invalid_argument) << "alpha=" << bad;
     }
+
+    // alpha = 1 is the inclusive upper bound: the sigma points sit one standard deviation out.
+    ConfigInputs unitAlpha;
+    unitAlpha.alpha = 1.0;
+    EXPECT_NO_THROW(buildConfig(unitAlpha));
 }
 
 TEST(FlybyFilterConfig, RejectsBetaOutsideRange) {
@@ -182,7 +194,7 @@ TEST(FlybyFilterAlgorithmLifecycle, ConstructorSeedsStateAndCovarianceFromConfig
     EXPECT_TRUE(algo.getCovariance().isApprox(P0, 1E-9));
 }
 
-TEST(FlybyFilterAlgorithmLifecycle, ReInitializePreservesEstimateReInitializeAllResetsIt) {
+TEST(FlybyFilterAlgorithmLifecycle, ReInitializeExceptPersistentStatesPreservesEstimateReInitializeResetsIt) {
     State const initial = nominalTruth();
     Matrix6 const P0 = diagCovariance(100.0, 0.1);
     FlybyFilterAlgorithm algo(baseConfig(initial, P0));

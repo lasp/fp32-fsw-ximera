@@ -115,12 +115,24 @@ TEST(InertialFilterConfig, RejectsNonPositiveSemiDefiniteCovariance) {
     EXPECT_THROW(buildConfig(in), fsw::invalid_argument);
 }
 
-TEST(InertialFilterConfig, RejectsAlphaOutsideOpenUnitInterval) {
-    for (double bad : {0.0, 1.0, -0.1, 1.5}) {  // (0, 1) open interval: endpoints excluded
+TEST(InertialFilterConfig, RejectsNonFiniteInitialState) {
+    ConfigInputs in;
+    in.initialState =
+        makeState(Eigen::Vector3d(std::numeric_limits<double>::quiet_NaN(), 0.0, 0.0), Eigen::Vector3d::Zero());
+    EXPECT_THROW(buildConfig(in), fsw::invalid_argument);
+}
+
+TEST(InertialFilterConfig, RejectsAlphaOutsideHalfOpenUnitInterval) {
+    for (double bad : {0.0, -0.1, 1.5}) {  // (0, 1]: zero and anything above one are rejected
         ConfigInputs in;
         in.alpha = bad;
         EXPECT_THROW(buildConfig(in), fsw::invalid_argument) << "alpha=" << bad;
     }
+
+    // alpha = 1 is the inclusive upper bound: the sigma points sit one standard deviation out.
+    ConfigInputs unitAlpha;
+    unitAlpha.alpha = 1.0;
+    EXPECT_NO_THROW(buildConfig(unitAlpha));
 }
 
 TEST(InertialFilterConfig, RejectsBetaOutsideRange) {
@@ -196,7 +208,7 @@ TEST(InertialFilterAlgorithmLifecycle, ConstructorSeedsStateAndCovarianceFromCon
     EXPECT_TRUE(algo.getCovariance().isApprox(P0, 1E-12));
 }
 
-TEST(InertialFilterAlgorithmLifecycle, ReInitializePreservesEstimateReInitializeAllResetsIt) {
+TEST(InertialFilterAlgorithmLifecycle, ReInitializeExceptPersistentStatesPreservesEstimateReInitializeResetsIt) {
     InertialFilterAlgorithm algo(
         baseConfig(makeState(Eigen::Vector3d(0, 0, 0.05), Eigen::Vector3d(0.01, 0, 0)), diagCovariance(1E-2, 1E-2)));
 
@@ -229,7 +241,7 @@ TEST(InertialFilterAlgorithmLifecycle, ReInitializePreservesEstimateReInitialize
     EXPECT_TRUE(algo.getCovariance().isApprox(initialCovariance));
 }
 
-TEST(InertialFilterAlgorithmLifecycle, ReInitializeAllRestoresSeedAfterConvergence) {
+TEST(InertialFilterAlgorithmLifecycle, ReInitializeRestoresSeedAfterConvergence) {
     State const initial = makeState(Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero());
     Matrix6 const P0 = diagCovariance(1E-1, 1E-2);
     InertialFilterAlgorithm algo(baseConfig(initial, P0));

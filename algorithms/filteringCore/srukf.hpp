@@ -131,8 +131,8 @@ class SRuKF {
 
     // ---- Validity checks ----------------------------------------------------
 
-    /*! @return true iff alpha is in (0, 1) */
-    static bool alphaIsValid(double alpha) { return alpha > 0.0 && alpha < 1.0; }
+    /*! @return true iff alpha is in (0, 1] */
+    static bool alphaIsValid(double alpha) { return alpha > 0.0 && alpha <= 1.0; }
 
     /*! @return true iff beta is in [0, 2] */
     static bool betaIsValid(double beta) { return beta >= 0.0 && beta <= 2.0; }
@@ -140,7 +140,7 @@ class SRuKF {
     /*! Derive the sigma-point spread (lambda, eta), the sigma weights, and the
      *  process-noise Cholesky from alpha, beta, and the process noise. The estimate
      *  (state and covariance) is left untouched. */
-    void reConfigure() {
+    void configure() {
         constexpr int N = State::size;
         constexpr int numSigmaPoints = 2 * N + 1;
         constexpr auto Ndouble = static_cast<double>(N);
@@ -159,8 +159,8 @@ class SRuKF {
     }
 
     /*! Seed the estimate from initial conditions and re-derive the filter parameters
-     *  (reConfigure() plus a state/covariance reset). */
-    void reset() {
+     *  (configure() plus a state/covariance seed). */
+    void reInitialize() {
         constexpr int N = State::size;
 
         this->state = this->stateInitial;
@@ -180,7 +180,7 @@ class SRuKF {
         this->covariance = this->covarianceLastMeasurement;
         this->sqrtCovar = this->sqrtCovarLastMeasurement;
 
-        this->reConfigure();
+        this->configure();
     }
 
     /*! Rewind to the last-measurement state and propagate by dt. If dt = 0

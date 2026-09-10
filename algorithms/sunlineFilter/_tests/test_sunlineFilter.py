@@ -67,10 +67,10 @@ def setup_filter_data(filter_object):
                                        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0001, 0.0],
                                        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1]]
 
-    filter_object.cssMeasurementNoiseStd = 0.01
-    filter_object.gyroMeasurementNoiseStd = 0.001
-    sigmaSun = (1E-6) ** 2
-    sigmaRate = (1E-8) ** 2
+    filter_object.cssMeasurementNoiseStd = 0.0001
+    filter_object.gyroMeasurementNoiseStd = 0.00001
+    sigmaSun = (1E-5) ** 2
+    sigmaRate = (1E-5) ** 2
     sigmaBias = (1E-5) ** 2
     filter_object.processNoise = [[sigmaSun, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                                   [0.0, sigmaSun, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -320,6 +320,13 @@ def state_update_flyby(initial_error, show_plots=False):
             gyro_post_fit_log[i, 1:gyro_size_obs[i]+1] = gyro_post_fit_log_sparse[i, 1:gyro_size_obs[i]+1]
             gyro_pre_fit_log[i, 1:gyro_size_obs[i]+1] = gyro_pre_fit_log_sparse[i, 1:gyro_size_obs[i]+1]
 
+    # Plot before asserting: when an assertion below fails, these figures are what explains it.
+    diff = np.copy(state_data_log)
+    diff[:, 1:] -= expected[:, 1:]
+    if show_plots:
+        filter_plots.state_covar(state_data_log, covariance_data_log, 'Update').show()
+        filter_plots.states(diff, 'Update').show()
+
     half_time = len(time) // 2
     # testing that Sun Heading vector estimate is correct within 5 sigma
     np.testing.assert_allclose(state_data_log[half_time:, 1:4],
@@ -356,5 +363,161 @@ def state_update_flyby(initial_error, show_plots=False):
         filter_plots.post_fit_residuals(gyro_pre_fit_log, gyroSigma, 'Update Gyro PostFit').show()
 
 
+# Steps at which a gross outlier is mixed into the measurement stream. The two sensors are kept on
+# disjoint steps so each stream's perturbation is attributable to it alone.
+CSS_OUTLIER_STEPS = (100, 200, 300, 400, 500)
+GYRO_OUTLIER_STEPS = (150, 250, 350, 450)
+CSS_OUTLIER = 3.0                            # [-] cosine offset added to the brightest sensor
+GYRO_OUTLIER = np.array([0.5, 0.5, -0.5])    # [rad/s] offset added to a gyro sample
+
+
+def test_outlier_recovery_kf(show_plots):
+    state_update_outlier_recovery(show_plots)
+
+
+def state_update_outlier_recovery(show_plots=False):
+    """Track the sun-heading profile with occasional gross CSS and gyro outliers, and check the
+    filter has converged by the last step."""
+    unit_task_name = "unitTask"  # arbitrary name (don't change)
+    unit_process_name = "TestProcess"  # arbitrary name (don't change)
+
+    unit_test_sim = SimulationBaseClass.SimBaseClass()
+
+    dt = 1.0
+    test_process_rate = macros.sec2nano(dt)
+    test_process = unit_test_sim.CreateNewProcess(unit_process_name)
+    test_process.addTask(unit_test_sim.CreateNewTask(unit_task_name, test_process_rate))
+
+    sunHeadingFilter = sunlineFilterF32.SunlineFilter()
+    setup_filter_data(sunHeadingFilter)
+    unit_test_sim.AddModelToTask(unit_task_name, sunHeadingFilter)
+
+    sun_heading_data_log = sunHeadingFilter.filterOutMsg.recorder()
+    unit_test_sim.AddModelToTask(unit_task_name, sun_heading_data_log)
+    css_residual_data_log = sunHeadingFilter.filterCssResOutMsg.recorder()
+    unit_test_sim.AddModelToTask(unit_task_name, css_residual_data_log)
+
+    simpleNavMsgData = messaging.NavAttMsgPayload()
+    initState = np.array(sunHeadingFilter.initialState).reshape(7)
+    simpleNavMsgData.timeTag = -1
+    simpleNavMsgData.omega_BN_B = initState[3:6]
+    simpleNavMsg = messaging.NavAttMsg().write(simpleNavMsgData)
+    sunHeadingFilter.navAttInMsg.subscribeTo(simpleNavMsg)
+
+    CSSOrientationList = [
+        [0.70710678118654746, -0.5, 0.5],
+        [0.70710678118654746, -0.5, -0.5],
+        [0.70710678118654746, 0.5, -0.5],
+        [0.70710678118654746, 0.5, 0.5],
+        [-0.70710678118654746, 0, 0.70710678118654757],
+        [-0.70710678118654746, 0.70710678118654757, 0.0],
+        [-0.70710678118654746, 0, -0.70710678118654757],
+        [-0.70710678118654746, -0.70710678118654757, 0.0],
+    ]
+    num_css = len(CSSOrientationList)
+
+    cssConfigMsg = messaging.CSSConfigMsg()
+    setup_css_config_msg(CSSOrientationList, cssConfigMsg)
+    sunHeadingFilter.cssConfigInMsg.subscribeTo(cssConfigMsg)
+
+    num_steps = 600
+    np.random.seed(0)
+    time = np.linspace(0, num_steps, num_steps + 1)
+    expected = np.zeros([len(time), 8])
+    expected[0, 1:] = initState
+    expected = rk4(sunline_dynamics, time, expected[0, 1:], normalizeState=True)
+
+    bodyFrame = np.zeros([len(time), 8])
+    bodyFrame[0, 1:] = np.array([0.0, 0.0, 0.0, expected[0, 4], expected[0, 5], expected[0, 6], expected[0, 7]])
+    bodyFrame = rk4(mrp_integration, time, bodyFrame[0, 1:], mrpShadow=True)
+
+    cssDataMsg = messaging.CSSArraySensorMsgPayload()
+    cssMsg = messaging.CSSArraySensorMsg()
+    sunHeadingFilter.cssDataInMsg.subscribeTo(cssMsg)
+
+    cssSigma = sunHeadingFilter.cssMeasurementNoiseStd
+    gyroSigma = sunHeadingFilter.gyroMeasurementNoiseStd
+    # The gyro is stamped half a step after the CSS array so the queue order within a cycle is fixed
+    # and the two streams cannot race.
+    gyro_time_offset = 0.5 * dt
+
+    css_meas = np.zeros([num_steps, num_css + 1])
+    css_truth = np.zeros([num_steps, num_css + 1])
+    gyro_meas = np.zeros([num_steps, 4])
+    gyro_truth = np.zeros([num_steps, 4])
+
+    unit_test_sim.InitializeSimulation()
+    for i in range(num_steps):
+        BN = rbk.MRP2C(bodyFrame[i, 1:4])
+        sunHeading_B = np.matmul(BN, [0, 0, 1])
+        clean = np.array([np.dot(CSSOrientationList[j], sunHeading_B) for j in range(num_css)])
+        cosValues = (clean + np.random.normal(0, cssSigma, num_css)) * expected[i, 7]
+        omega = expected[0, 4:7] + np.random.normal(0, gyroSigma, 3)
+        if i in CSS_OUTLIER_STEPS:
+            # Corrupt the sensor that currently sees the most light, so the glitched reading is
+            # certain to clear the sensor threshold and stay in the active set.
+            cosValues[np.argmax(cosValues)] += CSS_OUTLIER
+        if i in GYRO_OUTLIER_STEPS:
+            omega = omega + GYRO_OUTLIER
+
+        css_meas[i] = [macros.sec2nano(time[i]), *cosValues]
+        css_truth[i] = [macros.sec2nano(time[i]), *(clean * expected[i, 7])]
+        gyro_meas[i] = [macros.sec2nano(time[i]), *omega]
+        gyro_truth[i] = [macros.sec2nano(time[i]), *expected[0, 4:7]]
+
+        cssDataMsg.CosValue = cosValues
+        cssDataMsg.timeTag = time[i]
+        cssMsg.write(cssDataMsg)
+        simpleNavMsgData.timeTag = time[i] + gyro_time_offset
+        simpleNavMsgData.omega_BN_B = omega
+        simpleNavMsg.write(simpleNavMsgData)
+
+        unit_test_sim.ConfigureStopTime(macros.sec2nano(time[i + 1]))
+        unit_test_sim.ExecuteSimulation()
+
+    num_states = 7
+    state_all = add_time_column(sun_heading_data_log.times(), sun_heading_data_log.state[:, :num_states])
+    covar_all = add_time_column(sun_heading_data_log.times(), sun_heading_data_log.covar[:, :num_states ** 2])
+    # Log row 0 is the seeded estimate at t = 0; from there on row k + 1 is loop step k, so drop the
+    # first row to line the logs up with the injected-outlier step indices.
+    state_data_log = state_all[1:]
+    covariance_data_log = covar_all[1:]
+
+    np.testing.assert_equal(len(state_data_log), num_steps,
+                            err_msg='log length does not match the step count')
+
+    heading_err = np.linalg.norm(state_data_log[:, 1:4] - expected[1:num_steps + 1, 1:4], axis=1)
+    rate_err = np.linalg.norm(state_data_log[:, 4:7] - expected[1:num_steps + 1, 4:7], axis=1)
+    # Reference level for the error_recovery figures: the accuracy before any outlier lands.
+    heading_baseline = float(np.median(heading_err[30:min(CSS_OUTLIER_STEPS)]))
+    rate_baseline = float(np.median(rate_err[30:min(GYRO_OUTLIER_STEPS)]))
+
+    if show_plots:
+        diff = np.copy(state_data_log)
+        diff[:, 1:] -= expected[1:num_steps + 1, 1:]
+        used = np.ones(num_steps, dtype=bool)
+        heading_err_col = np.column_stack([state_data_log[:, 0], heading_err])
+        rate_err_col = np.column_stack([state_data_log[:, 0], rate_err])
+        filter_plots.outlier_rejection(css_meas, css_truth, used, 'CSS Outliers').show()
+        filter_plots.outlier_rejection(gyro_meas, gyro_truth, used, 'Gyro Outliers').show()
+        filter_plots.error_recovery(heading_err_col, CSS_OUTLIER_STEPS, heading_baseline, 'Heading').show()
+        filter_plots.error_recovery(rate_err_col, GYRO_OUTLIER_STEPS, rate_baseline, 'Rate').show()
+        filter_plots.state_covar(state_data_log, covariance_data_log, 'Outlier Recovery').show()
+        filter_plots.states(diff, 'Outlier Recovery').show()
+
+    # Tolerances are multiples of the measurement noise so they follow the tuning; covariance is
+    # checked on the trace because an individual block can end above its seeded value.
+    np.testing.assert_allclose(state_data_log[-1, 1:4], expected[-1, 1:4], atol=5 * cssSigma,
+                               err_msg='heading not converged at the last step', verbose=True)
+    np.testing.assert_allclose(state_data_log[-1, 4:7], expected[-1, 4:7], atol=5 * gyroSigma,
+                               err_msg='rate not converged at the last step', verbose=True)
+    np.testing.assert_allclose(state_data_log[-1, 7], expected[-1, 7], atol=0.2,
+                               err_msg='bias not converged at the last step', verbose=True)
+    np.testing.assert_array_less(np.trace(covariance_data_log[-1, 1:num_states ** 2 + 1].reshape([num_states] * 2)),
+                                 0.01 * np.trace(covar_all[0, 1:num_states ** 2 + 1].reshape([num_states] * 2)),
+                                 err_msg='covariance not low at the last step', verbose=True)
+
+
 if __name__ == "__main__":
     state_update_flyby(True, True)
+    state_update_outlier_recovery(True)

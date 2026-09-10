@@ -61,7 +61,11 @@ def setup_filter_data(module, initial_state_si):
     module.headingMeasurementNoiseStd = HEADING_STD
     module.initialState = list(initial_state_si)
     module.initialCovariance = np.diag([1000.0 * 1E6] * 3 + [0.1 * 1E6] * 3).tolist()  # m^2, (m/s)^2
-    module.processNoise = np.diag([(1E-6) ** 2] * 3 + [(1E-8) ** 2] * 3).tolist()
+
+    qNoiseIn = np.identity(6)
+    qNoiseIn[0:3, 0:3] = qNoiseIn[0:3, 0:3] * 1 ** 2
+    qNoiseIn[3:6, 3:6] = qNoiseIn[3:6, 3:6] * 0.01 ** 2
+    module.processNoise = qNoiseIn.tolist()
 
 
 def specific_energy(states):
@@ -197,6 +201,98 @@ def test_measurements(show_plots):
         "measurement updates should reduce the residual"
 
 
+# Measurement indices (not sim steps) at which a gross heading outlier is injected.
+HEADING_OUTLIER_MEAS = (20, 40, 60, 80)
+HEADING_OUTLIER = np.array([0.4, -0.4, 0.4])  # [-] added to the unit vector before renormalising
+
+
+def test_outlier_recovery(show_plots):
+    """Feed optical-nav headings along a two-body arc with occasional gross heading outliers mixed
+    in, and check the filter has converged by the last step."""
+    sim = SimulationBaseClass.SimBaseClass()
+    dt = 1.0
+    n_steps = 2000
+    meas_every = 10
+    proc = sim.CreateNewProcess("test_process")
+    proc.addTask(sim.CreateNewTask("unit_task", macros.sec2nano(dt)))
+
+    module = flybyFilterF32.FlybyFilter()
+    sim.AddModelToTask("unit_task", module)
+
+    r0, v0 = truth_rv()
+    setup_filter_data(module, np.concatenate([r0, v0]))  # seeded at truth: the outliers are the only error
+
+    filter_log = module.filterOutMsg.recorder()
+    res_log = module.filterResOutMsg.recorder()
+    sim.AddModelToTask("unit_task", filter_log)
+    sim.AddModelToTask("unit_task", res_log)
+
+    opnav_payload = messaging.OpNavUnitVecMsgPayload()
+    opnav_msg = messaging.OpNavUnitVecMsg()
+    module.opNavHeadingMsg.subscribeTo(opnav_msg)
+
+    time = np.linspace(0, n_steps * dt, n_steps + 1)
+    truth = rk4(two_body_gravity, time, np.concatenate([r0, v0]))
+
+    meas_steps = list(range(meas_every, n_steps, meas_every))
+    heading_meas = np.zeros([len(meas_steps), 4])
+    heading_truth = np.zeros([len(meas_steps), 4])
+
+    rng = np.random.default_rng(7)
+    sim.InitializeSimulation()
+    for i in range(n_steps):
+        if i in meas_steps:
+            n = meas_steps.index(i)
+            clean = truth[i, 1:4] / np.linalg.norm(truth[i, 1:4])
+            rhat = clean + HEADING_STD * rng.standard_normal(3)
+            if n in HEADING_OUTLIER_MEAS:
+                rhat = rhat + HEADING_OUTLIER
+            rhat /= np.linalg.norm(rhat)
+            heading_meas[n] = [macros.sec2nano(time[i]), *rhat]
+            heading_truth[n] = [macros.sec2nano(time[i]), *clean]
+            opnav_payload.timeTag = i * dt
+            opnav_payload.rhat_BN_N = rhat.tolist()
+            opnav_payload.valid = True
+            opnav_msg.write(opnav_payload, sim.TotalSim.getCurrentNanos())
+        sim.ConfigureStopTime(macros.sec2nano((i + 1) * dt))
+        sim.ExecuteSimulation()
+
+    num_states = 6
+    state_log = add_time_column(filter_log.times(), filter_log.state[:, :num_states])
+    covar_log = add_time_column(filter_log.times(), filter_log.covar[:, :num_states ** 2])
+    res_post = add_time_column(res_log.times(), np.array(res_log.postFits)[:, :3])
+
+    # Heading angle, for the figure: it is the quantity bearing-only measurements constrain.
+    head_err_deg = np.zeros(len(meas_steps))
+    for k, i in enumerate(meas_steps):
+        est = state_log[i, 1:4] / np.linalg.norm(state_log[i, 1:4])
+        tru = truth[i, 1:4] / np.linalg.norm(truth[i, 1:4])
+        head_err_deg[k] = np.degrees(np.arccos(np.clip(np.dot(est, tru), -1.0, 1.0)))
+    err_col = np.column_stack([heading_meas[:, 0], head_err_deg])
+    # Reference level for the error_recovery figure: the accuracy before any outlier lands.
+    baseline = float(np.median(head_err_deg[5:min(HEADING_OUTLIER_MEAS)]))
+
+    filter_plots.outlier_rejection(heading_meas, heading_truth,
+                                   np.ones(len(meas_steps), dtype=bool), 'Heading Outliers', show_plots)
+    filter_plots.error_recovery(err_col, HEADING_OUTLIER_MEAS, baseline, 'Heading', show_plots)
+    filter_plots.state_covar(state_log, covar_log, 'Outlier Recovery', show_plots)
+    filter_plots.post_fit_residuals(res_post, HEADING_STD, 'Outlier Recovery', show_plots)
+
+    # Norms rather than element-wise: two truth velocity components pass near zero. The bounds are
+    # loose (measured 8% and 35%) because bearings determine range and speed only weakly.
+    np.testing.assert_array_less(np.linalg.norm(state_log[-1, 1:4] - truth[-1, 1:4]),
+                                 0.2 * np.linalg.norm(truth[-1, 1:4]),
+                                 err_msg='position not converged at the last step', verbose=True)
+    np.testing.assert_array_less(np.linalg.norm(state_log[-1, 4:7] - truth[-1, 4:7]),
+                                 0.6 * np.linalg.norm(truth[-1, 4:7]),
+                                 err_msg='velocity not converged at the last step', verbose=True)
+    cov_diag = np.diag(covar_log[-1, 1:num_states ** 2 + 1].reshape(num_states, num_states))
+    cov_diag0 = np.diag(covar_log[0, 1:num_states ** 2 + 1].reshape(num_states, num_states))
+    np.testing.assert_array_less(cov_diag.sum(), 0.25 * cov_diag0.sum(),
+                                 err_msg='covariance not low at the last step', verbose=True)
+
+
 if __name__ == "__main__":
-    test_propagation(False)
-    test_measurements(False)
+    test_propagation(True)
+    test_measurements(True)
+    test_outlier_recovery(True)

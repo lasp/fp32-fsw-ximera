@@ -135,10 +135,10 @@ TEST(SrukfApi, SetGetRoundtripsForAlphaAndBeta) {
 // Valid inputs. The validators are static: they take the term to check and can be called
 // without an SRuKF instance (e.g. from a filter's config validation in another file).
 TEST(SrukfApi, ValidityChecks) {
-    // (1) alphaIsValid: true iff alpha in (0, 1) (endpoints excluded).
+    // (1) alphaIsValid: true iff alpha in (0, 1] -- zero excluded, one included.
     EXPECT_TRUE(SRuKFType::alphaIsValid(0.5)) << "alpha=0.5 in range";
+    EXPECT_TRUE(SRuKFType::alphaIsValid(1.0)) << "alpha=1 is the inclusive upper bound";
     EXPECT_FALSE(SRuKFType::alphaIsValid(0.0)) << "alpha=0 excluded";
-    EXPECT_FALSE(SRuKFType::alphaIsValid(1.0)) << "alpha=1 excluded";
     EXPECT_FALSE(SRuKFType::alphaIsValid(-0.1)) << "alpha<0";
     EXPECT_FALSE(SRuKFType::alphaIsValid(1.5)) << "alpha>1";
 
@@ -163,8 +163,8 @@ TEST(SrukfApi, ResetCopiesInitialStateAndCovarianceToWorkingState) {
     filter.setInitialCovariance(P0);
     filter.setProcessNoise(0.1 * Eigen::Matrix3d::Identity());
 
-    filter.reset();
-    filter.reConfigure();
+    filter.reInitialize();
+    filter.configure();
 
     // Working state and last-measurement state are both stateInitial.
     EXPECT_TRUE(filter.getState().raw().isApprox(s0.raw(), 1e-12)) << "state";
@@ -183,8 +183,8 @@ TEST(SrukfTimeUpdate, RewindsToLastMeasurementMakingTimeUpdateIdempotent) {
     filter.setBeta(2.0);
     filter.setInitialCovariance(Eigen::Matrix3d::Identity());
     filter.setProcessNoise(0.1 * Eigen::Matrix3d::Identity());
-    filter.reset();
-    filter.reConfigure();
+    filter.reInitialize();
+    filter.configure();
 
     // First timeUpdate from anchor produces stateA / covA.
     filter.timeUpdate(2.0);
@@ -209,8 +209,8 @@ TEST(SrukfTimeUpdate, CovarianceUnderTimeUpdate) {
     Eigen::Matrix3d const P0 = Eigen::Matrix3d::Identity();
     filter.setInitialCovariance(P0);
     filter.setProcessNoise(0.1 * Eigen::Matrix3d::Identity());
-    filter.reset();
-    filter.reConfigure();
+    filter.reInitialize();
+    filter.configure();
 
     filter.timeUpdate(0.0);
     EXPECT_TRUE(filter.getCovariance().isApprox(P0, 1e-10)) << "dt=0 should leave covariance unchanged";
@@ -232,8 +232,8 @@ TEST(SrukfMeasurementUpdate, InformativeMeasurementUpdatesStateAndShrinksCovaria
     filter.setBeta(2.0);
     filter.setInitialCovariance(Eigen::Matrix3d::Identity());
     filter.setProcessNoise(Eigen::Matrix3d::Zero());
-    filter.reset();
-    filter.reConfigure();
+    filter.reInitialize();
+    filter.configure();
     filter.timeUpdate(0.0);  // populates sigma points around the anchor
 
     PositionMeasurement m;
@@ -269,8 +269,8 @@ TEST(SrukfMeasurementUpdate, HighMeasurementNoiseLeavesStateNearlyUnchanged) {
     filter.setBeta(2.0);
     filter.setInitialCovariance(Eigen::Matrix3d::Identity());
     filter.setProcessNoise(Eigen::Matrix3d::Zero());
-    filter.reset();
-    filter.reConfigure();
+    filter.reInitialize();
+    filter.configure();
     filter.timeUpdate(0.0);
 
     TestState const stateBefore = filter.getState();
@@ -294,8 +294,8 @@ TEST(SrukfMeasurementUpdate, NaNMeasurementReturnsNoValue) {
     filter.setBeta(2.0);
     filter.setInitialCovariance(Eigen::Matrix3d::Identity());
     filter.setProcessNoise(Eigen::Matrix3d::Zero());
-    filter.reset();
-    filter.reConfigure();
+    filter.reInitialize();
+    filter.configure();
     filter.timeUpdate(0.0);
 
     PositionMeasurement m;

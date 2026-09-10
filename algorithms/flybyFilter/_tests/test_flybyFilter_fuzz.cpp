@@ -104,14 +104,14 @@ void fuzzTimeAndMeasurementUpdates(double alpha,
     EXPECT_TRUE(algo.getState().raw().allFinite()) << "state after measurementUpdate";
 }
 FUZZ_TEST(FlybyFilterFuzz, fuzzTimeAndMeasurementUpdates)
-    .WithDomains(fuzztest::InRange(1e-2, 1.0 - 1e-9),  // alpha in (0, 1)
-                 fuzztest::InRange(0.0, 2.0),          // beta
-                 fuzztest::InRange(1e3, 1e5),          // mu [km^3/s^2]
-                 fuzztest::InRange(1.0, 3e2),          // initial position std [km]
-                 fuzztest::InRange(1e-3, 1.0),         // initial velocity std [km/s]
-                 fuzztest::InRange(0.0, 1e-4),         // process noise
-                 fuzztest::InRange(1e-5, 1e-1),        // heading measurement std
-                 fuzztest::InRange(-500.0, 500.0),     // initial r offset x/y/z [km]
+    .WithDomains(fuzztest::InRange(1e-2, 1.0),      // alpha in (0, 1]
+                 fuzztest::InRange(0.0, 2.0),       // beta
+                 fuzztest::InRange(1e3, 1e5),       // mu [km^3/s^2]
+                 fuzztest::InRange(1.0, 3e2),       // initial position std [km]
+                 fuzztest::InRange(1e-3, 1.0),      // initial velocity std [km/s]
+                 fuzztest::InRange(0.0, 1e-4),      // process noise
+                 fuzztest::InRange(1e-5, 1e-1),     // heading measurement std
+                 fuzztest::InRange(-500.0, 500.0),  // initial r offset x/y/z [km]
                  fuzztest::InRange(-500.0, 500.0),
                  fuzztest::InRange(-500.0, 500.0),
                  fuzztest::InRange(-1.0, 1.0),  // initial v offset x/y/z [km/s]
@@ -157,13 +157,13 @@ void fuzzTimeUpdatePropagatesStateAndGrowsCovariance(double alpha,
     EXPECT_GE(P.trace(), noiseFree.getCovariance().trace() - 1e-6) << "process noise should not shrink the covariance";
 }
 FUZZ_TEST(FlybyFilterFuzz, fuzzTimeUpdatePropagatesStateAndGrowsCovariance)
-    .WithDomains(fuzztest::InRange(1e-2, 1.0 - 1e-9),  // alpha
-                 fuzztest::InRange(0.0, 2.0),          // beta
-                 fuzztest::InRange(1e3, 1e5),          // mu
-                 fuzztest::InRange(1.0, 3e2),          // position std
-                 fuzztest::InRange(1e-3, 1.0),         // velocity std
-                 fuzztest::InRange(0.0, 1e-4),         // process noise
-                 fuzztest::InRange(-500.0, 500.0),     // initial r offset x/y/z
+    .WithDomains(fuzztest::InRange(1e-2, 1.0),      // alpha
+                 fuzztest::InRange(0.0, 2.0),       // beta
+                 fuzztest::InRange(1e3, 1e5),       // mu
+                 fuzztest::InRange(1.0, 3e2),       // position std
+                 fuzztest::InRange(1e-3, 1.0),      // velocity std
+                 fuzztest::InRange(0.0, 1e-4),      // process noise
+                 fuzztest::InRange(-500.0, 500.0),  // initial r offset x/y/z
                  fuzztest::InRange(-500.0, 500.0),
                  fuzztest::InRange(-500.0, 500.0),
                  fuzztest::InRange(-1.0, 1.0),  // initial v offset x/y/z
