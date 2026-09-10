@@ -5,6 +5,7 @@
 
 #include <architecture/utilities/eigenSupport.h>
 #include <utilities/fsw/timeConstants.h>
+#include <utilities/fsw/freestandingIsFinite.hpp>
 
 #include <Eigen/Core>
 
@@ -33,6 +34,12 @@ FlybyFilter::~FlybyFilter() = default;
 void FlybyFilter::reset(uint64_t /*currentSimNanos*/) {
     if (!this->opNavHeadingMsg.isLinked()) {
         throw std::invalid_argument("flybyFilter.opNavHeadingMsg wasn't connected.");
+    }
+    // Guarded here rather than in the Config: unitConversion never reaches the algorithm, but
+    // writeOutputMessages() divides by it, so a zero or negative scale would silently publish
+    // infinities instead of failing at reset().
+    if (!fsw::is_finite(this->unitConversion) || this->unitConversion <= 0.0) {
+        throw std::invalid_argument("flybyFilter.unitConversion must be positive.");
     }
 
     constexpr int n = FlybyFilterAlgorithm::N;
