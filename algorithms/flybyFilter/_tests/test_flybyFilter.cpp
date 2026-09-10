@@ -2,7 +2,11 @@
 //
 // Sections (grouped simplest-first):
 //   * Config: factory validation, static validators, getter round-trips.
-//   * Lifecycle: construction seeds state/covariance; reInitializeExceptPersistentStates / reInitialize / setConfig.
+//   * Lifecycle: construction seeds state/covariance; reInitializeExceptPersistentStates /
+//     reInitialize / setConfig / clear().
+//   * Output: getFilterOutput() and the snapshot returned by update() agree with the accessors.
+//   * Scheduler: freshness gating, stale drops, delayed-but-newer measurements, rollback after a
+//     bad update, and the BatchSize == 1 queue limit.
 //   * Dynamics: two-body point-mass gravity r_dot = v, v_dot = -mu/|r|^3 r.
 //   * timeUpdate(): zero-dt no-op; propagation matches filtering::propagate; covariance growth under Q.
 //   * measurementUpdate(): heading update shrinks covariance (symmetric + PSD); high-noise limit;
@@ -22,6 +26,7 @@
 
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <random>
 
 namespace filtering::flybyFilter {
@@ -286,6 +291,157 @@ TEST(FlybyFilterAlgorithmOutput, UpdateSnapshotMatchesTheAccessors) {
     EXPECT_TRUE(out.headingResiduals.observation.isApprox(latest.observation, 1E-12));
     EXPECT_TRUE(out.headingResiduals.preFit.isApprox(latest.preFit, 1E-12));
     EXPECT_TRUE(out.headingResiduals.postFit.isApprox(latest.postFit, 1E-12));
+}
+
+// ============================================================================
+// Scheduler: how update() drives applySequentialRobust -- freshness gating, stale drops,
+// delayed-but-newer measurements, and rollback after a bad update.
+// ============================================================================
+
+//! Drive one measurement-free cycle and return the resulting state.
+namespace {
+TestState propagateOnly(TestState const& initial, Matrix6 const& P, double callTime) {
+    FlybyFilterAlgorithm algo(baseConfig(initial, P));
+    algo.update(callTime, HeadingData{});
+    return algo.getState();
+}
+}  // namespace
+
+TEST(FlybyFilterAlgorithmScheduler, NoMeasurementCyclePropagatesToTheCallTime) {
+    TestState const initial = nominalTruth();
+    Matrix6 const P0 = diagCovariance(100.0, 0.1);
+    FlybyFilterAlgorithm algo(baseConfig(initial, P0));
+
+    constexpr double callTime = 40.0;
+    FlybyFilterOutput const out = algo.update(callTime, HeadingData{});
+
+    TestState const expected = filtering::propagate(FlybyDynamics{kMu}, initial, {0.0, callTime});
+    EXPECT_TRUE(algo.getState().raw().isApprox(expected.raw(), 1E-9))
+        << "an empty cycle must still propagate to the call time";
+    EXPECT_FALSE(out.headingResiduals.valid) << "no measurement fired, so no residual is reported";
+}
+
+TEST(FlybyFilterAlgorithmScheduler, NonPositiveTimeTagIsNotEnqueued) {
+    TestState const initial = nominalTruth();
+    Matrix6 const P0 = diagCovariance(100.0, 0.1);
+    constexpr double callTime = 40.0;
+
+    // timeTag <= 0 is the adapter's "no fresh reading this cycle" sentinel; both 0 and a negative
+    // tag must behave exactly like an empty HeadingData.
+    TestState const reference = propagateOnly(initial, P0, callTime);
+    for (double staleTag : {0.0, -5.0}) {
+        FlybyFilterAlgorithm algo(baseConfig(initial, P0));
+        HeadingData heading;
+        heading.timeTag = staleTag;
+        heading.rhat_BN_N = Eigen::Vector3d(0.0, 0.0, 1.0);  // deliberately far from the prior
+        FlybyFilterOutput const out = algo.update(callTime, heading);
+
+        EXPECT_FALSE(out.headingResiduals.valid) << "timeTag=" << staleTag;
+        EXPECT_TRUE(algo.getState().raw().isApprox(reference.raw(), 1E-12)) << "timeTag=" << staleTag;
+    }
+}
+
+TEST(FlybyFilterAlgorithmScheduler, MeasurementOlderThanTheAnchorIsDropped) {
+    TestState const initial = nominalTruth();
+    Matrix6 const P0 = diagCovariance(100.0, 0.1);
+    FlybyFilterAlgorithm algo(baseConfig(initial, P0));
+
+    // Anchor the filter at t = 100 with a good measurement.
+    HeadingData fresh;
+    fresh.timeTag = 100.0;
+    fresh.rhat_BN_N = headingOf(initial);
+    ASSERT_TRUE(algo.update(100.0, fresh).headingResiduals.valid);
+    TestState const anchor = algo.getState();
+
+    // A measurement stamped before the anchor is discarded by the scheduler, leaving the cycle
+    // equivalent to a pure propagation.
+    HeadingData stale;
+    stale.timeTag = 50.0;
+    stale.rhat_BN_N = Eigen::Vector3d(0.0, 0.0, 1.0);
+    FlybyFilterOutput const out = algo.update(110.0, stale);
+
+    EXPECT_FALSE(out.headingResiduals.valid) << "a measurement older than the anchor must be dropped";
+    TestState const expected = filtering::propagate(FlybyDynamics{kMu}, anchor, {0.0, 10.0});
+    EXPECT_TRUE(algo.getState().raw().isApprox(expected.raw(), 1E-9));
+}
+
+TEST(FlybyFilterAlgorithmScheduler, DelayedButNewerMeasurementIsAppliedAtItsOwnTimeTag) {
+    TestState const initial = nominalTruth();
+    Matrix6 const P0 = diagCovariance(100.0, 0.1);
+
+    // Deliver the same measurement, stamped at t = 105, either on time or late (at t = 120). Because
+    // the filter anchors to the time tag rather than the delivery time, both runs must agree.
+    auto run = [&](double deliveryTime) {
+        FlybyFilterAlgorithm algo(baseConfig(initial, P0));
+        HeadingData first;
+        first.timeTag = 100.0;
+        first.rhat_BN_N = headingOf(initial);
+        algo.update(100.0, first);
+
+        HeadingData delayed;
+        delayed.timeTag = 105.0;
+        delayed.rhat_BN_N = headingOf(initial);
+        FlybyFilterOutput const out = algo.update(deliveryTime, delayed);
+        EXPECT_TRUE(out.headingResiduals.valid) << "delivered at " << deliveryTime;
+
+        // Bring both runs to the same final time before comparing.
+        algo.update(120.0, HeadingData{});
+        return algo.getState();
+    };
+
+    TestState const onTime = run(105.0);
+    TestState const late = run(120.0);
+    EXPECT_TRUE(late.raw().isApprox(onTime.raw(), 1E-9))
+        << "a late measurement must land at its time tag, not its delivery time";
+}
+
+TEST(FlybyFilterAlgorithmScheduler, BadMeasurementIsRolledBackAndTheCycleStillPropagates) {
+    TestState const initial = nominalTruth();
+    Matrix6 const P0 = diagCovariance(100.0, 0.1);
+
+    auto anchored = [&]() {
+        auto algo = std::make_unique<FlybyFilterAlgorithm>(baseConfig(initial, P0));
+        HeadingData good;
+        good.timeTag = 100.0;
+        good.rhat_BN_N = headingOf(initial);
+        algo->update(100.0, good);
+        return algo;
+    };
+
+    // A NaN heading fails inside the SRuKF; applySequentialRobust rolls the filter back to the
+    // anchor and then propagates the remainder of the cycle, so the result is indistinguishable
+    // from a cycle in which the measurement never arrived.
+    auto poisoned = anchored();
+    HeadingData bad;
+    bad.timeTag = 110.0;
+    bad.rhat_BN_N = Eigen::Vector3d::Constant(std::numeric_limits<double>::quiet_NaN());
+    FlybyFilterOutput const out = poisoned->update(110.0, bad);
+
+    auto untouched = anchored();
+    untouched->update(110.0, HeadingData{});
+
+    EXPECT_FALSE(out.headingResiduals.valid) << "a rejected measurement must not report a residual";
+    EXPECT_TRUE(poisoned->getState().raw().allFinite()) << "rollback must leave the state finite";
+    EXPECT_TRUE(poisoned->getState().raw().isApprox(untouched->getState().raw(), 1E-9))
+        << "a rejected measurement must leave the same estimate as no measurement at all";
+    EXPECT_TRUE(poisoned->getCovariance().isApprox(untouched->getCovariance(), 1E-9));
+
+    // The filter recovers: the next good measurement fires normally.
+    HeadingData recovery;
+    recovery.timeTag = 120.0;
+    recovery.rhat_BN_N = headingOf(poisoned->getState());
+    EXPECT_TRUE(poisoned->update(120.0, recovery).headingResiduals.valid);
+}
+
+TEST(FlybyFilterAlgorithmScheduler, QueueAdmitsOneMeasurementPerCycle) {
+    // BatchSize == 1: the flyby filter takes at most one heading per cycle, and a second enqueue in
+    // the same cycle is refused rather than silently overwriting the first.
+    static_assert(BatchSize == 1, "flybyFilter processes a single heading measurement per cycle");
+
+    filtering::measurement_queue<Measurement, BatchSize> queue;
+    EXPECT_TRUE(queue.enqueue(1.0, makeHeadingMeasurement(1.0, Eigen::Vector3d::UnitX(), kHeadingStd)));
+    EXPECT_FALSE(queue.enqueue(2.0, makeHeadingMeasurement(2.0, Eigen::Vector3d::UnitY(), kHeadingStd)))
+        << "the queue is full at BatchSize measurements";
 }
 
 // ============================================================================
