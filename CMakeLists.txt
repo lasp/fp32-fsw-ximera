@@ -12,6 +12,7 @@ macro(add_algorithm name)
 
   target_include_directories(${target_name} PRIVATE ${PROJECT_SOURCE_DIR}/algorithms/${name})
   target_include_directories(${target_name} PRIVATE ${PROJECT_SOURCE_DIR})
+  target_include_directories(${target_name} PRIVATE ${PROJECT_SOURCE_DIR}/algorithms)
   target_include_directories(${target_name} PRIVATE ${EIGEN3_DIR})
 
   # FswUtilities supplies the "utilities/fsw/..." include prefix (the algorithms/
