@@ -83,8 +83,6 @@ algorithms/oeStateEphem/oeStateEphem.h
 algorithms/oeStateEphem/oeStateEphem.cpp
 algorithms/oeStateEphem/oeStateEphemAlgorithm_c.h
 algorithms/oeStateEphem/oeStateEphemAlgorithm_c.cpp
-algorithms/rateControl/rateControl.h
-algorithms/rateControl/rateControl.cpp
 algorithms/rwMotorTorque/rwMotorTorque.h
 algorithms/rwMotorTorque/rwMotorTorque.cpp
 algorithms/rwMotorTorque/rwMotorTorqueAlgorithm_c.h
