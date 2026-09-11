@@ -26,7 +26,7 @@ struct InertialDynamics {
         Eigen::Vector3d const omega = state.get<filtering::AngularRate<3>>();
 
         InertialState xDot;
-        xDot.set<filtering::MrpAttitude<3>>(0.25 * bmatMrp(sigma) * omega);
+        xDot.set<filtering::MrpAttitude<3>>(dmrp(sigma, omega));
         xDot.set<filtering::AngularRate<3>>(Eigen::Vector3d::Zero());
         return xDot;
     }

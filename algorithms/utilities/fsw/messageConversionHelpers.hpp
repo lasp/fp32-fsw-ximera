@@ -59,14 +59,14 @@ inline void convert(const AttRefMsgF32Payload& src, AttRefMsgPayload& dst) {
 }
 
 inline void convert(const NavAttMsgPayload& src, NavAttMsgF32Payload& dst) {
-    dst.timeTag = static_cast<float>(src.timeTag);
+    dst.timeTag = src.timeTag;
     convertArray(src.sigma_BN, dst.sigma_BN);
     convertArray(src.omega_BN_B, dst.omega_BN_B);
     convertArray(src.vehSunPntBdy, dst.vehSunPntBdy);
 }
 
 inline void convert(const NavAttMsgF32Payload& src, NavAttMsgPayload& dst) {
-    dst.timeTag = static_cast<double>(src.timeTag);
+    dst.timeTag = src.timeTag;
     convertArray(src.sigma_BN, dst.sigma_BN);
     convertArray(src.omega_BN_B, dst.omega_BN_B);
     convertArray(src.vehSunPntBdy, dst.vehSunPntBdy);
@@ -79,26 +79,26 @@ inline void convert(const NavAttMsgF32Payload& src, NavAttMsgPayload& dst) {
 #include "msgPayloadDef/STAttMsgF32Payload.h"
 
 inline void convert(const STSensorMsgPayload& src, STSensorMsgF32Payload& dst) {
-    dst.timeTag = static_cast<float>(src.timeTag);
+    dst.timeTag = src.timeTag;
     convertArray(src.qInrtl2Case, dst.qInrtl2Case);
     convertArray(src.omega_CN_C, dst.omega_CN_C);
 }
 
 inline void convert(const STSensorMsgF32Payload& src, STSensorMsgPayload& dst) {
-    dst.timeTag = static_cast<double>(src.timeTag);
+    dst.timeTag = src.timeTag;
     convertArray(src.qInrtl2Case, dst.qInrtl2Case);
     convertArray(src.omega_CN_C, dst.omega_CN_C);
 }
 
 inline void convert(const STAttMsgPayload& src, STAttMsgF32Payload& dst) {
-    dst.timeTag = static_cast<float>(src.timeTag);
+    dst.timeTag = src.timeTag;
     convertArray(src.MRP_BdyInrtl, dst.MRP_BdyInrtl);
     convertArray(src.omega_BN_B, dst.omega_BN_B);
     convertArray(src.dcm_CB, dst.dcm_CB);
 }
 
 inline void convert(const STAttMsgF32Payload& src, STAttMsgPayload& dst) {
-    dst.timeTag = static_cast<double>(src.timeTag);
+    dst.timeTag = src.timeTag;
     convertArray(src.MRP_BdyInrtl, dst.MRP_BdyInrtl);
     convertArray(src.omega_BN_B, dst.omega_BN_B);
     convertArray(src.dcm_CB, dst.dcm_CB);

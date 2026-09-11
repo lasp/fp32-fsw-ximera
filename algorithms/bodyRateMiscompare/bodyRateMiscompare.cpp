@@ -13,7 +13,7 @@ static void convertArray(const double (&src)[N], float (&dst)[N]) {
 }
 
 inline void convert(const STAttMsgPayload& src, STAttMsgF32Payload& dst) {
-    dst.timeTag = static_cast<float>(src.timeTag);
+    dst.timeTag = src.timeTag;
     convertArray(src.MRP_BdyInrtl, dst.MRP_BdyInrtl);
     convertArray(src.omega_BN_B, dst.omega_BN_B);
     convertArray(src.dcm_CB, dst.dcm_CB);

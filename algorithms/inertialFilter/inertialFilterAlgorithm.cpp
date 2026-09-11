@@ -84,7 +84,8 @@ void InertialFilterAlgorithm::reInitializeExceptPersistentStates() {
     this->lastRateResiduals = RateResidualsOutput{};
 }
 
-/*! reInitialize() and additionally re-seed the filter state and covariance from the configuration.
+/*! reInitializeExceptPersistentStates() and additionally re-seed the filter state and covariance
+ *  from the configuration.
  *  @return void */
 void InertialFilterAlgorithm::reInitialize() {
     this->reInitializeExceptPersistentStates();

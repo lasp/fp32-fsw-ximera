@@ -1,9 +1,9 @@
 #include "inertialFilter.h"
 
 #include "inertialFilterAlgorithm.h"
+#include "utilities/fsw/timeConstants.h"
 #include "utilities/xmera/xmeraLifecycleException.h"
 
-#include <architecture/utilities/macroDefinitions.h>
 #include <utilities/fsw/eigenSupport.h>
 
 #include <Eigen/Core>
@@ -76,21 +76,20 @@ void InertialFilter::updateState(uint64_t currentSimNanos) {
         throw XmeraLifecycleException("InertialFilter reset() has not been called.");
     }
 
-    double const currentSeconds = static_cast<double>(currentSimNanos) * NANO2SEC;
+    double const currentSeconds = static_cast<double>(currentSimNanos) * kNano2Sec;
 
     StAttData stAttData{};
     RateData rateData{};
 
-    if (auto const stPayload = this->stAttInMsg(); stPayload.timeTag > this->lastStTimeTag) {
-        stAttData.timeTag = stPayload.timeTag;
-        stAttData.sigma_BN = cArrayToEigenVector(stPayload.MRP_BdyInrtl);
-        this->lastStTimeTag = stPayload.timeTag;
+    if (auto const stPayload = this->stAttInMsg(); static_cast<double>(stPayload.timeTag) > this->lastStTimeTag) {
+        stAttData.timeTag = static_cast<double>(stPayload.timeTag);
+        stAttData.sigma_BN = cArrayToEigenVector(stPayload.MRP_BdyInrtl).cast<double>();
+        this->lastStTimeTag = stAttData.timeTag;
     }
 
-    if (this->gyrBuffInMsg.isLinked() && this->gyrBuffInMsg.isWritten()) {
-        auto const [accPkts] = this->gyrBuffInMsg();
+    if (this->imuSensorBodyInMsg.isLinked() && this->imuSensorBodyInMsg.isWritten()) {
         rateData.timeTag = currentSeconds;
-        rateData.rate = cArrayToEigenVector(accPkts[0].gyro_B);
+        rateData.rate = cArrayToEigenVector(this->imuSensorBodyInMsg().AngVelBody).cast<double>();
     }
 
     InertialFilterOutput const filterOutput = this->algorithm->update(currentSeconds, stAttData, rateData);
@@ -102,16 +101,16 @@ void InertialFilter::updateState(uint64_t currentSimNanos) {
  *  @param currentSimNanos [ns] sim time provided to the outgoing messages
  *  @param filterOutput    [-]  filter data returned by algorithm */
 void InertialFilter::writeOutputMessages(uint64_t currentSimNanos, InertialFilterOutput const& filterOutput) {
-    NavAttMsgPayload navAttBuf{};
-    FilterMsgPayload filterBuf{};
-    FilterResidualsMsgPayload stResBuf{};
-    FilterResidualsMsgPayload gyroResBuf{};
+    NavAttMsgF32Payload navAttBuf{};
+    FilterMsgF32Payload filterBuf{};
+    FilterResidualsMsgF32Payload stResBuf{};
+    FilterResidualsMsgF32Payload gyroResBuf{};
 
-    double const timeTag = static_cast<double>(currentSimNanos) * NANO2SEC;
+    double const timeTag = static_cast<double>(currentSimNanos) * kNano2Sec;
 
     navAttBuf.timeTag = timeTag;
-    eigenMatrixXToCArray(filterOutput.filterState.state.head<3>().eval(), navAttBuf.sigma_BN);
-    eigenMatrixXToCArray(filterOutput.filterState.state.segment<3>(3).eval(), navAttBuf.omega_BN_B);
+    eigenVectorToCArray(filterOutput.filterState.state.head<3>().cast<float>(), navAttBuf.sigma_BN);
+    eigenVectorToCArray(filterOutput.filterState.state.segment<3>(3).cast<float>(), navAttBuf.omega_BN_B);
 
     filterBuf.timeTag = timeTag;
     filterBuf.numberOfStates = InertialFilterAlgorithm::N;

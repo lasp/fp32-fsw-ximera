@@ -5,7 +5,7 @@
 
 /*! @brief Abstracted star tracker measurement input. */
 struct STAttInput {
-    float timeTag{};
+    double timeTag{};
     Eigen::Vector3f MRP_BdyInrtl = Eigen::Vector3f::Zero();
     Eigen::Vector3f omega_BN_B = Eigen::Vector3f::Zero();
 };
