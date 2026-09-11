@@ -5,12 +5,9 @@
 
 #include <algorithm>
 
-static_assert(THR_FIRING_REMAINDER_MAX_THRUSTER_COUNT == kMaxThrusterCount,
-              "C-shim thruster count must match the algorithm's kMaxThrusterCount");
-
 namespace {
 ThrFiringRemainderConfig configFromC(const uint32_t numThrusters,
-                                     float maxThrust[THR_FIRING_REMAINDER_MAX_THRUSTER_COUNT],
+                                     float maxThrust[MAX_EFF_CNT],
                                      const float thrMinFireTime,
                                      const float controlPeriod,
                                      const float onTimeSaturationFactor,
@@ -27,10 +24,10 @@ ThrFiringRemainderConfig configFromC(const uint32_t numThrusters,
 }
 }  // namespace
 
-uint32_t ThrFiringRemainderAlgorithm_getMaxThrusterCount(void) { return THR_FIRING_REMAINDER_MAX_THRUSTER_COUNT; }
+uint32_t ThrFiringRemainderAlgorithm_getMaxThrusterCount(void) { return kMaxThrusterCount; }
 
 bool ThrFiringRemainderAlgorithm_validateConfig(const uint32_t numThrusters,
-                                                float maxThrust[THR_FIRING_REMAINDER_MAX_THRUSTER_COUNT],
+                                                float maxThrust[MAX_EFF_CNT],
                                                 const float thrMinFireTime,
                                                 const float controlPeriod,
                                                 const float onTimeSaturationFactor,
@@ -48,7 +45,7 @@ bool ThrFiringRemainderAlgorithm_validateConfig(const uint32_t numThrusters,
 
 ThrFiringRemainderAlgorithmHandle* ThrFiringRemainderAlgorithm_create(
     const uint32_t numThrusters,
-    float maxThrust[THR_FIRING_REMAINDER_MAX_THRUSTER_COUNT],
+    float maxThrust[MAX_EFF_CNT],
     const float thrMinFireTime,
     const float controlPeriod,
     const float onTimeSaturationFactor,
@@ -63,7 +60,7 @@ void ThrFiringRemainderAlgorithm_destroy(ThrFiringRemainderAlgorithmHandle* self
 
 void ThrFiringRemainderAlgorithm_setConfig(ThrFiringRemainderAlgorithmHandle* self,
                                            const uint32_t numThrusters,
-                                           float maxThrust[THR_FIRING_REMAINDER_MAX_THRUSTER_COUNT],
+                                           float maxThrust[MAX_EFF_CNT],
                                            const float thrMinFireTime,
                                            const float controlPeriod,
                                            const float onTimeSaturationFactor,

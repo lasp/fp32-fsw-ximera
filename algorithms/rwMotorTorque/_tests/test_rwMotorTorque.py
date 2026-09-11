@@ -18,7 +18,7 @@ from xmera.utilities import macros
 from xmera.architecture import messaging
 
 @pytest.mark.parametrize("num_control_axes", [0, 1, 2, 3])
-@pytest.mark.parametrize("num_wheels", [2, 4, messaging.RW_EFF_CNT])
+@pytest.mark.parametrize("num_wheels", sorted({2, 4, messaging.RW_EFF_CNT}))
 @pytest.mark.parametrize("num_input_cmd_torques", [1, 2])
 @pytest.mark.parametrize("rw_avail_msg",["NO", "ON", "OFF", "MIXED"])
 @pytest.mark.parametrize("omega_gain", [0.0, 0.5])
@@ -130,7 +130,7 @@ def test_rw_motor_torque(show_plots, num_control_axes, num_wheels, num_input_cmd
         rw_avail_in_msg = messaging.RWAvailabilityMsg().write(rw_availability_message)
         module.rwAvailInMsg.subscribeTo(rw_avail_in_msg)
     else:
-        avail = [rwMotorTorqueF32.AVAILABLE] * num_wheels  # this is used purely for the python level solution
+        avail = [messaging.AVAILABLE] * num_wheels  # this is used purely for the python level solution
 
     # Setup logging on the test module output message so that we get all the writes to it
     data_log = module.rwMotorTorqueOutMsg.recorder()
@@ -269,7 +269,7 @@ def compute_null_space_torque(Gs_B, num_wheels, rw_speeds, desired_omega, omega_
 if __name__ == "__main__":
     test_rw_motor_torque(False,
                          3,  # numControlAxes
-                         36,  # numWheels
+                         messaging.RW_EFF_CNT,  # numWheels
                          2,  # numInputCmdTorques
                          "NO",  # RWAvailMsg ("NO", "ON", "OFF")
                          0.5  # omegaGain

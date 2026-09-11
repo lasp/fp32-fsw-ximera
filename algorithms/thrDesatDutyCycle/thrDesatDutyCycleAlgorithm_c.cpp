@@ -5,12 +5,7 @@
 #include <algorithm>
 #include <array>
 
-// The C boundary's thruster count must match the system-wide maximum, otherwise the POD force arrays would not
-// map onto the algorithm's fixed-size types.
-static_assert(THR_DESAT_DUTY_CYCLE_MAX_THRUSTER_COUNT == kMaxThrusterCount,
-              "THR_DESAT_DUTY_CYCLE_MAX_THRUSTER_COUNT must match kMaxThrusterCount");
-
-uint32_t ThrDesatDutyCycleAlgorithm_getMaxThrusterCount(void) { return THR_DESAT_DUTY_CYCLE_MAX_THRUSTER_COUNT; }
+uint32_t ThrDesatDutyCycleAlgorithm_getMaxThrusterCount(void) { return kMaxThrusterCount; }
 
 bool ThrDesatDutyCycleAlgorithm_validateConfig(uint32_t firingPeriods, uint32_t settlingPeriods) {
     try {

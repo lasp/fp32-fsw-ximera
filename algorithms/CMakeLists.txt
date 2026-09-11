@@ -1,3 +1,8 @@
+# These algorithms are written against the mission's array bounds, so the module root declares them.
+# Selecting this root therefore also selects its mission sizing: the two cannot drift apart, and a
+# second root declaring different bounds is a configure-time error.
+xmera_provide_mission_parameters("${CMAKE_CURRENT_SOURCE_DIR}")
+
 add_subdirectory(msgPayloadDef)
 
 add_subdirectory(filteringCore)

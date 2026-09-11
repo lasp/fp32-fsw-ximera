@@ -27,7 +27,7 @@ MomentumManagementConfig makeConfig(float hsMin,
 
 }  // namespace
 
-uint32_t MomentumManagementAlgorithm_getMaxNumRw(void) { return MOMENTUM_MANAGEMENT_MAX_NUM_RW; }
+uint32_t MomentumManagementAlgorithm_getMaxNumRw(void) { return kMaxNumRw; }
 
 bool MomentumManagementAlgorithm_validateConfig(float hsMin,
                                                 float K,

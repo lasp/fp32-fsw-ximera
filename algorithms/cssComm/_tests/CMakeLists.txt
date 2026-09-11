@@ -9,6 +9,7 @@ target_include_directories(test_cssComm PRIVATE "${CMAKE_SOURCE_DIR}")
 
 target_link_libraries(test_cssComm PRIVATE
     GTest::gtest_main
+    Xmera::MissionParameters
   )
 
 gtest_discover_tests(test_cssComm)
@@ -28,6 +29,7 @@ if(XMERA_ENABLE_FUZZTESTS)
   target_link_libraries(test_cssComm_fuzz PRIVATE
     fuzztest::fuzztest
     fuzztest::fuzztest_gtest_main
+    Xmera::MissionParameters
   )
 
   gtest_discover_tests(test_cssComm_fuzz

@@ -1,13 +1,11 @@
 #ifndef F32XMERA_THR_DESAT_DUTY_CYCLE_TYPES_H
 #define F32XMERA_THR_DESAT_DUTY_CYCLE_TYPES_H
 
+#include "msgPayloadDef/definitions.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** @brief Maximum number of thrusters handled at the C boundary. Must match kMaxThrusterCount in
-    msgPayloadDef/definitions.h (enforced by a static_assert in the C shim). */
-#define THR_DESAT_DUTY_CYCLE_MAX_THRUSTER_COUNT 36
 
 /**
  * @brief Bounded-array carrier for the per-thruster force command, used for both the gate's input and its
@@ -16,7 +14,7 @@ extern "C" {
  *        gated like the rest, so they stay zero for a zero input.
  */
 typedef struct {
-    float thrForce[THR_DESAT_DUTY_CYCLE_MAX_THRUSTER_COUNT]; /*!< [N] per-thruster force command */
+    float thrForce[MAX_EFF_CNT]; /*!< [N] per-thruster force command */
 } ThrDesatDutyCycleForceCmd_c;
 
 #ifdef __cplusplus

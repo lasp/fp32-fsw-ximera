@@ -44,11 +44,7 @@ jobs:
           persist-credentials: false
 
       - name: Checkout Xmera core
-        uses: actions/checkout@v7
-        with:
-          repository: lasp/xmera
-          path: xmera
-          persist-credentials: false
+        uses: ./.github/actions/checkout-xmera
 
       - name: Restore fuzz corpus cache
         id: fuzz-corpus-cache
