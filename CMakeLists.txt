@@ -139,7 +139,6 @@ set(algorithms
     "mrpRotation"
     "navAggregate"
     "oeStateEphem"
-    "rateControl"
     "rwMotorVoltage"
     "solarArrayReference"
     "stepperMotorController"

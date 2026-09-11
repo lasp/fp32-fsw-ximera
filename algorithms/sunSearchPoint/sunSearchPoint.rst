@@ -23,7 +23,7 @@ The phase transition is **one-way**:
   pointing regardless (forced).
 - Once pointing, the module never returns to search (re-armed only by ``reset()``).
 
-The output should be paired with a control module such as :ref:`rateControl` /
+The output should be paired with a control module such as :ref:`mrpPD` /
 :ref:`mrpFeedback`.
 
 Message Connection Descriptions
