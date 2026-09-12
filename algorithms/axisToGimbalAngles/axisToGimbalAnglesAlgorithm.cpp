@@ -61,14 +61,19 @@ AxisToGimbalAnglesOutput AxisToGimbalAnglesAlgorithm::update(const Eigen::Vector
     AxisToGimbalAnglesOutput output{};
 
     // A request of zero length, or one that is not a number, carries no direction at all. The gimbal then stays
-    // at its neutral position, which is the zeroed output above.
+    // at its neutral position: zeroed angles, firing along the un-deflected axis.
+    Eigen::Vector3f clampedThrustHat_M = Eigen::Vector3f::UnitZ();
+
     if (thrustHat_M.allFinite() && !thrustHat_M.isZero()) {
-        const Eigen::Vector3f clampedThrustHat_M = this->clampDeflection(thrustHat_M);
+        clampedThrustHat_M = this->clampDeflection(thrustHat_M);
 
         // thetaMax is less than 90 degrees, so the z component stays above zero and both angles stay within it.
         output.gimbalAngle1 = safeAtan2f(-clampedThrustHat_M.y(), clampedThrustHat_M.z());
         output.gimbalAngle2 = safeAtan2f(clampedThrustHat_M.x(), clampedThrustHat_M.z());
     }
+
+    // The direction the mechanism will actually fire along.
+    output.thrustHat_B = (this->dcm_MB.transpose() * clampedThrustHat_M).stableNormalized();
 
     return output;
 }
